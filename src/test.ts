@@ -40,18 +40,14 @@ const Optional = <S extends Schema.Constraint>(schema: S) => {
       SchemaTransformation.transformOrFail({
         decode: (obj, options) =>
           obj.present
-            ? SchemaParser.decodeEffect(schema)(obj.value, {
-                ...options,
-                disableChecks: true,
-              })
+            ? SchemaParser.decodeEffect(schema)(obj.value, options)
             : Effect.succeed(undefined),
         encode: (value, options) =>
           value === undefined
             ? Effect.succeed({ present: false })
-            : SchemaParser.encodeEffect(schema)(value, {
-                ...options,
-                disableChecks: true,
-              }).pipe(Effect.map((value) => ({ present: true, value }))),
+            : SchemaParser.encodeEffect(schema)(value, options).pipe(
+                Effect.map((value) => ({ present: true, value })),
+              ),
       }),
     ),
   );
