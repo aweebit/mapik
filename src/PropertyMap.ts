@@ -3,6 +3,7 @@ import type {
   DeclaredValueOf,
   DeepRecord,
   MutuallyAssignable,
+  OptionalKeyOf,
 } from "./utils.js";
 
 // TODO: Allow symbols?
@@ -64,23 +65,42 @@ export type PropertyMapFlatten<
 type PropertyMapFlattenHelper<
   PM extends PropertyMap,
   D extends PropertyMapDeepConstraint<PM>,
+  O extends boolean = false, // inherited optionality
   K extends keyof PM & keyof D & string = keyof PM & keyof D & string,
 > = K extends unknown
-  ? [PM[K], DeclaredValueOf<D, K>] extends [infer PMV, infer DV]
+  ? [
+      PM[K],
+      DeclaredValueOf<D, K>,
+      K extends OptionalKeyOf<D, K> ? true : false,
+    ] extends [infer PMV, infer DV, infer KO extends boolean]
     ? PMV extends string
-      ? { [P in PMV]: DV } // TODO: preserve readonly / (!!!) optionality
-      : // { [P in keyof D as P extends K ? PMV : never]: DV }
-        PMV extends PropertyMap
+      ? true extends O | KO
+        ? { [P in PMV]?: DV }
+        : { [P in PMV]: DV }
+      : PMV extends PropertyMap
         ? DV extends PropertyMapDeepConstraint<PMV>
-          ? PropertyMapFlattenHelper<PMV, DV>
+          ? PropertyMapFlattenHelper<PMV, DV, O | KO>
           : never
         : never
     : never
   : never;
 
 type Y = PropertyMapFlatten<
-  { a: { b: "ab" }; c: "c"; nested: { value: "value" } },
-  { a?: { b?: number }; c?: {}; nested?: {}; another?: "one" }
+  {
+    a: { b: "ab" };
+    c: { d: "cd" };
+    r: { r: "rr" };
+    f: "ff";
+    nested: { value: "value" };
+  },
+  {
+    a: { b?: {} };
+    c?: { d: {} };
+    r: { r: {} };
+    f?: { r: {} };
+    nested?: {};
+    another?: {};
+  }
 >;
 
 export type PropertyMapDeepen<
