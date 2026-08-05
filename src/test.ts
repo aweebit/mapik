@@ -8,9 +8,9 @@ import {
 } from "drizzle-orm/pg-core";
 import { Effect, Schema, SchemaParser, SchemaTransformation } from "effect";
 import * as Codec from "./Codec.js";
-import { createEntityManagerClass } from "./EntityManager.js";
+import { createCreateEntityManager } from "./EntityManager.js";
 
-const EntityManager = createEntityManagerClass("_");
+const createEntityManager = createCreateEntityManager("_");
 
 const Optional = <S extends Schema.Constraint>(schema: S) => {
   const from = Schema.Union([
@@ -69,7 +69,7 @@ const experimentTable = snakeCase.table("experiment", {
   timeEnded: timestamp({ withTimezone: true }),
 });
 
-const experimentEntityManager = EntityManager.make<Experiment>()(
+const experimentEntityManager = createEntityManager<Experiment>()(
   experimentTable,
   { timeEnded: OptionalCodec<Date>() },
 );
@@ -102,7 +102,7 @@ const experimentDataTable = snakeCase.table(
   (table) => [primaryKey({ columns: [table.experimentId, table.timestamp] })],
 );
 
-const experimentDataEntityManager = EntityManager.make<ExperimentData>()(
+const experimentDataEntityManager = createEntityManager<ExperimentData>()(
   experimentDataTable,
   { acceleration: { top: Vector3dCodec, bottom: Vector3dCodec } },
 );

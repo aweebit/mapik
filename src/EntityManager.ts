@@ -1,8 +1,8 @@
 import type { InferSelectModel, Table } from "drizzle-orm";
 import * as Codec from "./Codec.js";
-import { createDeepenAtDelimiter, type DeepenAtDelimiter } from "./Utils.js";
 import type * as DeepFlat from "./DeepFlat.js";
 import * as Drizzle from "./Drizzle.js";
+import { createDeepenAtDelimiter, type DeepenAtDelimiter } from "./Utils.js";
 
 export class EntityManager<
   D extends string,
@@ -60,51 +60,7 @@ export class EntityManager<
   }
 }
 
-export interface EntityManagerClass<D extends string> {
-  new <
-    A,
-    T extends Table,
-    const M extends Codec.Map<A, B>,
-    B extends DeepFlat.Constraint.Deep<
-      DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
-      InferSelectModel<T>
-    > = Codec.Infer.Encoded<M, A> extends infer B extends
-      DeepFlat.Constraint.Deep<
-        DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
-        InferSelectModel<T>
-      >
-      ? B
-      : never,
-  >(
-    drizzleMapper: Drizzle.TableMapper<
-      T,
-      DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>
-    >,
-    map: M,
-  ): EntityManager<D, A, T, M, B>;
-
-  make<A>(): <
-    T extends Table,
-    const M extends Codec.Map<A, B>,
-    B extends DeepFlat.Constraint.Deep<
-      DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
-      InferSelectModel<T>
-    > = Codec.Infer.Encoded<M, A> extends infer B extends
-      DeepFlat.Constraint.Deep<
-        DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
-        InferSelectModel<T>
-      >
-      ? B
-      : never,
-  >(
-    table: T,
-    map: M,
-  ) => EntityManager<D, A, T, M, B>;
-}
-
-export const createEntityManagerClass = <D extends string>(
-  delimiter: D,
-): EntityManagerClass<D> => {
+export const createCreateEntityManager = <D extends string>(delimiter: D) => {
   const deepenAtDelimiter = createDeepenAtDelimiter(delimiter);
 
   const makeDrizzleMapper = <T extends Table>(
@@ -112,41 +68,23 @@ export const createEntityManagerClass = <D extends string>(
   ): Drizzle.TableMapper<T, DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>> =>
     Drizzle.TableMapper.make(table, deepenAtDelimiter);
 
-  const _EntityManager = EntityManager;
-
-  return class EntityManager<
-    A,
-    T extends Table,
-    const M extends Codec.Map<A, B>,
-    B extends DeepFlat.Constraint.Deep<
-      DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
-      InferSelectModel<T>
-    > = Codec.Infer.Encoded<M, A> extends infer B extends
-      DeepFlat.Constraint.Deep<
+  return function createEntityManager<A>() {
+    return <
+      T extends Table,
+      const M extends Codec.Map<A, B>,
+      B extends DeepFlat.Constraint.Deep<
         DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
         InferSelectModel<T>
-      >
-      ? B
-      : never,
-  > extends _EntityManager<D, A, T, M, B> {
-    static make<A>() {
-      return <
-        T extends Table,
-        const M extends Codec.Map<A, B>,
-        B extends DeepFlat.Constraint.Deep<
+      > = Codec.Infer.Encoded<M, A> extends infer B extends
+        DeepFlat.Constraint.Deep<
           DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
           InferSelectModel<T>
-        > = Codec.Infer.Encoded<M, A> extends infer B extends
-          DeepFlat.Constraint.Deep<
-            DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
-            InferSelectModel<T>
-          >
-          ? B
-          : never,
-      >(
-        table: T,
-        map: M,
-      ) => new EntityManager<A, T, M, B>(makeDrizzleMapper(table), map);
-    }
-  } as EntityManagerClass<D>;
+        >
+        ? B
+        : never,
+    >(
+      table: T,
+      map: M,
+    ) => new EntityManager<D, A, T, M, B>(makeDrizzleMapper(table), map);
+  };
 };
