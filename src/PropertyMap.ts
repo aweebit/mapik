@@ -125,6 +125,10 @@ export class Mapper<const PM extends PropertyMap> {
     this.deepen = this.deepen.bind(this);
   }
 
+  static make<const PM extends PropertyMap>(propertyMap: PM) {
+    return new Mapper(propertyMap);
+  }
+
   flatten<D extends DeepConstraint<PM>>(deep: D): Flatten<PM, D> {
     const flat: Record<string, unknown> = {};
     const process = (pm: PropertyMap, d: Record<string, unknown>) => {
