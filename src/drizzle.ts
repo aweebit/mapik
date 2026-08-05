@@ -8,13 +8,31 @@ import {
   type PropertyMap,
 } from "./PropertyMap.js";
 
+type IdentityMap<K extends PropertyKey> = { [P in K]: P } & {};
+
+const identityMap = <const Ks extends readonly PropertyKey[]>(keys: Ks) => {
+  return Object.fromEntries(keys.map((key) => [key, key])) as IdentityMap<
+    (typeof keys)[number]
+  >;
+};
+
+export type MapToSelf<T extends Table> = {
+  [K in keyof InferSelectModel<T>]: K;
+};
+
+export const mapToSelf = <T extends Table>(table: T): MapToSelf<T> => {
+  return identityMap(
+    Object.keys(table._.columns) as Array<keyof InferSelectModel<T>>,
+  );
+};
+
 export class DrizzleTableMapper<
   T extends Table,
   const PM extends PropertyMap<keyof InferSelectModel<T>>,
 > {
   protected readonly mapper: Mapper<PM>;
 
-  constructor(
+  protected constructor(
     readonly table: T,
     readonly propertyMap: PM,
   ) {
@@ -22,6 +40,30 @@ export class DrizzleTableMapper<
 
     this.flatten = this.flatten.bind(this);
     this.deepen = this.deepen.bind(this);
+  }
+
+  static make<T extends Table>(table: T): DrizzleTableMapper<T, MapToSelf<T>>;
+  static make<
+    T extends Table,
+    const PM extends PropertyMap<keyof InferSelectModel<T>>,
+  >(
+    table: T,
+    derivePropertyMap: (identityMap: MapToSelf<T>) => PM,
+  ): DrizzleTableMapper<T, PM>;
+  static make<
+    T extends Table,
+    const PM extends PropertyMap<keyof InferSelectModel<T>>,
+  >(table: T, propertyMap: PM): DrizzleTableMapper<T, PM>;
+  static make<
+    T extends Table,
+    const PM extends PropertyMap<keyof InferSelectModel<T>>,
+  >(table: T, propertyMap?: PM | ((identityMap: MapToSelf<T>) => PM)) {
+    return new DrizzleTableMapper(
+      table,
+      typeof propertyMap === "function"
+        ? propertyMap(mapToSelf(table))
+        : (propertyMap ?? mapToSelf(table)),
+    );
   }
 
   flatten<D extends DeepConstraint<PM, InferSelectModel<T>>>(
