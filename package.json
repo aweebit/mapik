@@ -1,13 +1,11 @@
 {
-  "name": "kysely-schema",
+  "name": "mapio",
   "type": "module",
   "dependencies": {
-    "drizzle-orm": "^1.0.0-rc.4",
-    "effect": "^4.0.0-beta.102",
-    "kysely": "^0.29.4",
-    "zod": "^4.4.3"
+    "drizzle-orm": "^1.0.0-rc.4"
   },
   "devDependencies": {
+    "effect": "^4.0.0-beta.102",
     "typescript": "^7.0.2"
   },
   "allowScripts": {
