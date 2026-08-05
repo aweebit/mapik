@@ -6,56 +6,51 @@ export type PropertyMap = DeepRecord<string, string>; // & DeepRecord<symbol, ne
 
 // TODO: Should edges cases where empty objects appear in PM receive special
 // treatment in the constraint types? (done?)
-export type PropertyMapDeepConstraint<PM extends PropertyMap> =
-  PropertyMapDeepConstraintHelper<PM>;
+export type DeepConstraint<PM extends PropertyMap> = DeepConstraintHelper<PM>;
 
-type PropertyMapDeepConstraintHelper<PM extends PropertyMap | string> =
-  PM extends string
-    ? unknown
-    : PM extends PropertyMap
-      ? PM[keyof PM & string] extends never
-        ? never
-        : Simplify<{
-            readonly [K in keyof PM & string]?: PropertyMapDeepConstraintHelper<
-              PM[K]
-            >;
-          }>
-      : never;
+type DeepConstraintHelper<PM extends PropertyMap | string> = PM extends string
+  ? unknown
+  : PM extends PropertyMap
+    ? PM[keyof PM & string] extends never
+      ? never
+      : Simplify<{
+          readonly [K in keyof PM & string]?: DeepConstraintHelper<PM[K]>;
+        }>
+    : never;
 
-export type PropertyMapFlatConstraint<PM extends PropertyMap> =
-  Simplify<PropertyMapFlatConstraintHelper<PM>> extends infer Result
+export type FlatConstraint<PM extends PropertyMap> =
+  Simplify<FlatConstraintHelper<PM>> extends infer Result
     ? unknown extends Result // TODO: investigate why this is necessary
       ? never
       : Result
     : never;
 
-type PropertyMapFlatConstraintHelper<PM extends PropertyMap | string> =
-  PM extends string
-    ? { readonly [K in PM]?: unknown }
-    : PM extends PropertyMap
-      ? PM[keyof PM & string] extends never
-        ? never
-        : UnionToIntersection<
-            {
-              [K in keyof PM & string]: PropertyMapFlatConstraintHelper<PM[K]>;
-            }[keyof PM & string]
-          >
-      : never;
+type FlatConstraintHelper<PM extends PropertyMap | string> = PM extends string
+  ? { readonly [K in PM]?: unknown }
+  : PM extends PropertyMap
+    ? PM[keyof PM & string] extends never
+      ? never
+      : UnionToIntersection<
+          {
+            [K in keyof PM & string]: FlatConstraintHelper<PM[K]>;
+          }[keyof PM & string]
+        >
+    : never;
 
-export type PropertyMapFlatten<
+export type Flatten<
   PM extends PropertyMap,
-  D extends PropertyMapDeepConstraint<PM>,
+  D extends DeepConstraint<PM>,
 > = PM extends unknown
-  ? D extends PropertyMapDeepConstraint<PM>
-    ? PropertyMapFlattenHelper<PM, D> extends never
+  ? D extends DeepConstraint<PM>
+    ? FlattenHelper<PM, D> extends never
       ? {}
-      : Simplify<UnionToIntersection<PropertyMapFlattenHelper<PM, D>>>
+      : Simplify<UnionToIntersection<FlattenHelper<PM, D>>>
     : never
   : never;
 
-type PropertyMapFlattenHelper<
+type FlattenHelper<
   PM extends PropertyMap,
-  D extends PropertyMapDeepConstraint<PM>,
+  D extends DeepConstraint<PM>,
   O extends boolean = false, // inherited optionality
 > = {
   [K in keyof PM & keyof D & string]: [
@@ -69,19 +64,19 @@ type PropertyMapFlattenHelper<
         ? { [P in PMV]?: DV }
         : { [P in PMV]: DV }
       : PMV extends PropertyMap
-        ? DV extends PropertyMapDeepConstraint<PMV>
-          ? PropertyMapFlattenHelper<PMV, DV, O | KO>
+        ? DV extends DeepConstraint<PMV>
+          ? FlattenHelper<PMV, DV, O | KO>
           : never
         : never
     : never;
 }[keyof PM & keyof D & string];
 
-export type PropertyMapDeepen<
+export type Deepen<
   PM extends PropertyMap,
-  F extends PropertyMapFlatConstraint<PM>,
+  F extends FlatConstraint<PM>,
 > = PM extends unknown
-  ? F extends PropertyMapFlatConstraint<PM>
-    ? PropertyMapDeepenHelper<PM, F>
+  ? F extends FlatConstraint<PM>
+    ? DeepenHelper<PM, F>
     : never
   : never;
 
@@ -99,9 +94,9 @@ type MapFlatKeyBack<PM extends PropertyMap, FK> = {
     : never;
 }[keyof PM & string];
 
-type PropertyMapDeepenHelper<
+type DeepenHelper<
   PM extends PropertyMap,
-  F extends PropertyMapFlatConstraint<PM>,
+  F extends FlatConstraint<PM>,
   FK extends keyof F = keyof F & PM[string],
 > = Simplify<
   {
@@ -109,8 +104,8 @@ type PropertyMapDeepenHelper<
   } & (RemoveRequiredNever<{
     [K in keyof PM & string]: PM[K] extends infer PMV
       ? PMV extends PropertyMap
-        ? F extends PropertyMapFlatConstraint<PMV>
-          ? PropertyMapDeepenHelper<PMV, F>
+        ? F extends FlatConstraint<PMV>
+          ? DeepenHelper<PMV, F>
           : never
         : never
       : never;
@@ -125,12 +120,10 @@ type ExtractKeysToRequire<T> = {
   [K in keyof T]-?: keyof T[K] extends OptionalKeyOf<T[K]> ? never : K;
 }[keyof T];
 
-export class FlatPropertyMapper<const PM extends PropertyMap> {
+export class Mapper<const PM extends PropertyMap> {
   constructor(readonly propertyMap: PM) {}
 
-  flatten<D extends PropertyMapDeepConstraint<PM>>(
-    deep: D,
-  ): PropertyMapFlatten<PM, D> {
+  flatten<D extends DeepConstraint<PM>>(deep: D): Flatten<PM, D> {
     const flat: Record<string, unknown> = {};
     const process = (pm: PropertyMap, d: Record<string, unknown>) => {
       Object.entries(pm).forEach(([key, value]) => {
@@ -141,12 +134,10 @@ export class FlatPropertyMapper<const PM extends PropertyMap> {
       });
     };
     process(this.propertyMap, deep);
-    return flat as PropertyMapFlatten<PM, D>;
+    return flat as Flatten<PM, D>;
   }
 
-  deepen<I extends PropertyMapFlatConstraint<PM>>(
-    flat: I,
-  ): PropertyMapDeepen<PM, I> {
+  deepen<I extends FlatConstraint<PM>>(flat: I): Deepen<PM, I> {
     const process = (pm: PropertyMap): Record<string, unknown> => {
       return Object.entries(pm).reduce<Record<string, unknown>>(
         (d, [key, value]) => {
@@ -159,6 +150,6 @@ export class FlatPropertyMapper<const PM extends PropertyMap> {
         {},
       );
     };
-    return process(this.propertyMap) as PropertyMapDeepen<PM, I>;
+    return process(this.propertyMap) as Deepen<PM, I>;
   }
 }
