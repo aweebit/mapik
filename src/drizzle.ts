@@ -1,6 +1,6 @@
 import type { InferSelectModel, Table } from "drizzle-orm";
 import {
-  Mapper,
+  PropertyMapper,
   type DeepConstraint,
   type Deepen,
   type FlatConstraint,
@@ -16,9 +16,7 @@ const identityMap = <const Ks extends readonly PropertyKey[]>(keys: Ks) => {
   >;
 };
 
-export type MapToSelf<T extends Table> = {
-  [K in keyof InferSelectModel<T>]: K;
-};
+export type MapToSelf<T extends Table> = IdentityMap<keyof InferSelectModel<T>>;
 
 export const mapToSelf = <T extends Table>(table: T): MapToSelf<T> => {
   return identityMap(
@@ -30,13 +28,13 @@ export class DrizzleTableMapper<
   T extends Table,
   const PM extends PropertyMap<keyof InferSelectModel<T>>,
 > {
-  protected readonly mapper: Mapper<PM>;
+  protected readonly mapper: PropertyMapper<PM>;
 
   protected constructor(
     readonly table: T,
     readonly propertyMap: PM,
   ) {
-    this.mapper = new Mapper(this.propertyMap);
+    this.mapper = new PropertyMapper(this.propertyMap);
 
     this.flatten = this.flatten.bind(this);
     this.deepen = this.deepen.bind(this);

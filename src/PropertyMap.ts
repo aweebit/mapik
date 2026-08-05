@@ -119,14 +119,14 @@ type DeepenHelper<
   >
 >;
 
-export class Mapper<const PM extends PropertyMap> {
+export class PropertyMapper<const PM extends PropertyMap> {
   constructor(readonly propertyMap: PM) {
     this.flatten = this.flatten.bind(this);
     this.deepen = this.deepen.bind(this);
   }
 
   static make<const PM extends PropertyMap>(propertyMap: PM) {
-    return new Mapper(propertyMap);
+    return new PropertyMapper(propertyMap);
   }
 
   flatten<D extends DeepConstraint<PM>>(deep: D): Flatten<PM, D> {
