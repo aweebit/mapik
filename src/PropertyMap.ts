@@ -1,8 +1,9 @@
 import type { Simplify, UnionToIntersection } from "effect/Types";
-
-export type DeepRecord<K extends PropertyKey, T> = {
-  [P in K]: T | DeepRecord<K, T>;
-};
+import type {
+  DeclaredValueOf,
+  DeepRecord,
+  MutuallyAssignable,
+} from "./utils.js";
 
 // TODO: Allow symbols?
 export type PropertyMap = DeepRecord<string, string>; // & DeepRecord<symbol, never>
@@ -65,7 +66,7 @@ type PropertyMapFlattenHelper<
   D extends PropertyMapDeepConstraint<PM>,
   K extends keyof PM & keyof D & string = keyof PM & keyof D & string,
 > = K extends unknown
-  ? [PM[K], D[K]] extends [infer PMV, infer DV]
+  ? [PM[K], DeclaredValueOf<D, K>] extends [infer PMV, infer DV]
     ? PMV extends string
       ? { [P in PMV]: DV } // TODO: preserve readonly / (!!!) optionality
       : // { [P in keyof D as P extends K ? PMV : never]: DV }
@@ -79,7 +80,7 @@ type PropertyMapFlattenHelper<
 
 type Y = PropertyMapFlatten<
   { a: { b: "ab" }; c: "c"; nested: { value: "value" } },
-  { a: { b: number }; c: {}; nested: {}; another: "one" }
+  { a?: { b?: number }; c?: {}; nested?: {}; another?: "one" }
 >;
 
 export type PropertyMapDeepen<
@@ -93,8 +94,6 @@ export type PropertyMapDeepen<
 
 declare const $never: unique symbol;
 type $never = typeof $never;
-
-export type MutuallyAssignable<A, B> = [A, B] extends [B, A] ? true : false;
 
 type $neverKeys<T> = {
   [K in keyof T]: MutuallyAssignable<T[K], $never> extends true ? never : K;
@@ -112,10 +111,8 @@ type PropertyMapDeepenHelper<
     // TODO: preserve readonly / (!!!) optionality
     -readonly [K in keyof PM & string]-?: PM[K] extends infer PMV
       ? PMV extends string
-        ? F extends { readonly [P in PMV]?: infer Result }
-          ? // better than F[PMV] because it doesn't add undefined when the
-            // property is optional
-            Result
+        ? PMV extends keyof F
+          ? DeclaredValueOf<F, PMV>
           : $never
         : PMV extends PropertyMap
           ? F extends PropertyMapFlatConstraint<PMV>
@@ -131,10 +128,6 @@ type PropertyMapDeepenHelper<
 >;
 
 type Z = PropertyMapDeepen<{ a: { b: "ab" }; c: "c" }, { ab?: never }>;
-
-export type OptionalKeyOf<T> = {
-  [K in keyof T]-?: {} extends Pick<T, K> ? K : never;
-}[keyof T];
 
 // // This probably won't work because the property value types are affected
 
