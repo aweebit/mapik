@@ -121,7 +121,10 @@ type ExtractKeysToRequire<T> = {
 }[keyof T];
 
 export class Mapper<const PM extends PropertyMap> {
-  constructor(readonly propertyMap: PM) {}
+  constructor(readonly propertyMap: PM) {
+    this.flatten = this.flatten.bind(this);
+    this.deepen = this.deepen.bind(this);
+  }
 
   flatten<D extends DeepConstraint<PM>>(deep: D): Flatten<PM, D> {
     const flat: Record<string, unknown> = {};
