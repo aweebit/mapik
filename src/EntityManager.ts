@@ -1,9 +1,6 @@
 import type { InferSelectModel, Table } from "drizzle-orm";
 import * as Codec from "./Codec.js";
-import {
-  createDeepenAtDelimiter,
-  type DeepenAtDelimiter,
-} from "./deepenAtDelimiter.js";
+import { createDeepenAtDelimiter, type DeepenAtDelimiter } from "./Utils.js";
 import type * as DeepFlat from "./DeepFlat.js";
 import * as Drizzle from "./Drizzle.js";
 
