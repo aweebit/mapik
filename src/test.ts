@@ -19,7 +19,7 @@ import {
 } from "./drizzle.js";
 import { drizzle } from "drizzle-orm/node-postgres";
 
-const Optional = <S extends Schema.Top>(schema: S) => {
+const Optional = <S extends Schema.Constraint>(schema: S) => {
   const from = Schema.Union([
     Schema.Struct({ present: Schema.Literal(false) }),
     Schema.Struct({
@@ -52,13 +52,41 @@ const Optional = <S extends Schema.Top>(schema: S) => {
   );
 };
 
+const OptionalOverwrites = <T>(schema: Schema.Schema<T>) => {
+  const typeSchema = Schema.toType(schema);
+  return Schema.optional(typeSchema).pipe(
+    Schema.encodeTo(
+      Schema.NullOr(typeSchema),
+      SchemaTransformation.transform<T | undefined, T | null>({
+        encode: (val) => (val === undefined ? null : val),
+        decode: (val) => (val === null ? undefined : val),
+      }),
+    ),
+  );
+};
+
 const Vector3d = Schema.Tuple([Schema.Number, Schema.Number, Schema.Number]);
+
+const Vector3dOverwrites = Vector3d.pipe(
+  Schema.encodeTo(
+    Schema.Struct({ x: Schema.Number, y: Schema.Number, z: Schema.Number }),
+    SchemaTransformation.transform({
+      encode: ([x, y, z]) => ({ x, y, z }),
+      decode: ({ x, y, z }) => [x, y, z],
+    }),
+  ),
+);
 
 class Experiment extends Schema.Class<Experiment>("Experiment")({
   name: Schema.String,
   timeStarted: Schema.Date,
   timeEnded: Optional(Schema.Date),
 }) {}
+
+const ExperimentOverwrites = Experiment.mapFields((fields) => ({
+  ...fields,
+  timeEnded: OptionalOverwrites(Schema.Date),
+}));
 
 class ExperimentData extends Schema.Class<ExperimentData>("ExperimentData")({
   experimentId: Schema.BigInt,
@@ -69,6 +97,14 @@ class ExperimentData extends Schema.Class<ExperimentData>("ExperimentData")({
     bottom: Vector3d,
   }),
 }) {}
+
+const ExperimentDataOverwrites = ExperimentData.mapFields((fields) => ({
+  ...fields,
+  acceleration: Schema.Struct({
+    top: Vector3dOverwrites,
+    bottom: Vector3dOverwrites,
+  }),
+}));
 
 const experiment = snakeCase.table("experiment", {
   id: bigint({ mode: "bigint" }).primaryKey().generatedAlwaysAsIdentity(),
@@ -125,10 +161,9 @@ const experimentId = (
   await db
     .insert(experiment)
     .values(
-      mapper(experiment).flatten({
-        ...newExperiment,
-        timeEnded: newExperiment.timeEnded ?? null,
-      }),
+      mapper(experiment).flatten(
+        Schema.encodeSync(ExperimentOverwrites)(newExperiment),
+      ),
     )
     .returning({ id: experiment.id })
 )[0]!.id;
@@ -140,12 +175,10 @@ const newExperimentData = new ExperimentData({
   acceleration: { top: [0, 0, 0], bottom: [0, 0, 0] },
 });
 
-await db.insert(experimentData).values(
-  mapper(experimentData).flatten({
-    ...newExperimentData,
-    acceleration: (({ top, bottom }) => ({
-      top: (([x, y, z]) => ({ x, y, z }))(top),
-      bottom: (([x, y, z]) => ({ x, y, z }))(bottom),
-    }))(newExperimentData.acceleration),
-  }),
-);
+await db
+  .insert(experimentData)
+  .values(
+    mapper(experimentData).flatten(
+      Schema.encodeSync(ExperimentDataOverwrites)(newExperimentData),
+    ),
+  );
