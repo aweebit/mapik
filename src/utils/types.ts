@@ -30,14 +30,12 @@ export type PropagateRequired<
 type PropagateRequiredHelper<
   T extends Record<PropertyKey, Record<PropertyKey, unknown>>,
   K extends keyof T = keyof T,
-  Partition extends { required: PropertyKey; optional: PropertyKey } =
-    K extends unknown
-      ? keyof ValueOf<T, K> extends OptionalKeyOf<ValueOf<T, K>>
-        ? { optional: K; required: never }
-        : { optional: never; required: K }
-      : never,
+  Partition extends { required: K; optional: K } = K extends unknown
+    ? keyof ValueOf<T, K> extends OptionalKeyOf<ValueOf<T, K>>
+      ? { optional: K; required: never }
+      : { optional: never; required: K }
+    : never,
 > = Simplify<
-  { [K in Partition["required"]]: ValueOf<T, K> } & {
-    [K in Partition["optional"]]?: ValueOf<T, K>;
-  }
+  Required<Pick<T, Partition["required"]>> &
+    Partial<Pick<T, Partition["optional"]>>
 >;
