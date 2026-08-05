@@ -189,9 +189,10 @@ class Entity<
     input: X,
   ): Flatten<
     DeepenAtDelimiter<"_", MapToSelf<T>>,
+    // @ts-expect-error
     Encode<TM, X, Schema.Schema.Type<S>, E>
   > {
-    return this.drizzleMapper.flatten(this.effectMapper.encode(input));
+    return this.drizzleMapper.flatten(this.effectMapper.encode(input) as any);
   }
 
   decode<
@@ -203,11 +204,12 @@ class Entity<
     input: X,
   ): Decode<
     TM,
+    // @ts-expect-error
     Deepen<DeepenAtDelimiter<"_", MapToSelf<T>>, X>,
     Schema.Schema.Type<S>,
     E
   > {
-    return this.effectMapper.decode(this.drizzleMapper.deepen(input));
+    return this.effectMapper.decode(this.drizzleMapper.deepen(input) as any);
   }
 }
 
