@@ -1,5 +1,11 @@
-import type { Simplify, UnionToIntersection } from "effect/Types";
-import type { DeepRecord, OptionalKeyOf, ValueOf } from "./utils/types.js";
+import type {
+  DeepRecord,
+  OptionalKeyOf,
+  PropagateRequired,
+  Simplify,
+  UnionToIntersection,
+  ValueOf,
+} from "./utils/types.js";
 
 // TODO: Allow symbols?
 export type PropertyMap<FK extends PropertyKey = string> = DeepRecord<
@@ -79,11 +85,11 @@ export type Deepen<
     : never
   : never;
 
-type KeyOfExceptRequiredNever<T> = {
+type KeyExceptRequiredNever<T> = {
   [K in keyof T]-?: T[K] extends never ? never : K;
 }[keyof T];
 
-type RemoveRequiredNever<T> = Pick<T, KeyOfExceptRequiredNever<T>>;
+type RemoveRequiredNever<T> = Pick<T, KeyExceptRequiredNever<T>>;
 
 type MapFlatKeyBack<PM extends PropertyMap, FK> = {
   [K in keyof PM & string]: PM[K] extends infer PMV
@@ -100,24 +106,18 @@ type DeepenHelper<
 > = Simplify<
   {
     -readonly [K in FK as MapFlatKeyBack<PM, K>]: F[K];
-  } & (RemoveRequiredNever<{
-    [K in keyof PM & string]: PM[K] extends infer PMV
-      ? PMV extends PropertyMap
-        ? F extends FlatConstraint<PMV>
-          ? DeepenHelper<PMV, F>
+  } & PropagateRequired<
+    RemoveRequiredNever<{
+      [K in keyof PM & string]: PM[K] extends infer PMV
+        ? PMV extends PropertyMap
+          ? F extends FlatConstraint<PMV>
+            ? DeepenHelper<PMV, F>
+            : never
           : never
-        : never
-      : never;
-  }> extends infer Result
-    ? { [K in ExtractKeysToRequire<Result>]: Result[K] } & {
-        [K in Exclude<keyof Result, ExtractKeysToRequire<Result>>]?: Result[K];
-      }
-    : never)
+        : never;
+    }>
+  >
 >;
-
-type ExtractKeysToRequire<T> = {
-  [K in keyof T]-?: keyof T[K] extends OptionalKeyOf<T[K]> ? never : K;
-}[keyof T];
 
 export class Mapper<const PM extends PropertyMap> {
   constructor(readonly propertyMap: PM) {
