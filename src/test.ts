@@ -1,5 +1,4 @@
 import type { InferSelectModel, Table } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/node-postgres";
 import {
   bigint,
   doublePrecision,
@@ -13,11 +12,7 @@ import {
   createDeepenAtDelimiter,
   type DeepenAtDelimiter,
 } from "./deepenAtDelimiter.js";
-import {
-  createDrizzleMapper,
-  DrizzleTableMapper,
-  type MapToSelf,
-} from "./drizzle.js";
+import { DrizzleTableMapper, type MapToSelf } from "./drizzle.js";
 import type {
   DeepConstraint,
   Deepen,
@@ -87,10 +82,6 @@ class Experiment extends Schema.Class<Experiment>("Experiment")({
   timeEnded: Optional(Schema.Date),
 }) {}
 
-const ExperimentOverwrites = TransformationMapper.for<Experiment>().encode({
-  timeEnded: OptionalOverwrites<Date>(),
-});
-
 class ExperimentData extends Schema.Class<ExperimentData>("ExperimentData")({
   experimentId: Schema.BigInt,
   timestamp: Schema.Date,
@@ -100,11 +91,6 @@ class ExperimentData extends Schema.Class<ExperimentData>("ExperimentData")({
     bottom: Vector3d,
   }),
 }) {}
-
-const ExperimentDataOverwrites =
-  TransformationMapper.for<ExperimentData>().encode({
-    acceleration: { top: Vector3dOverwrites, bottom: Vector3dOverwrites },
-  });
 
 const experiment = snakeCase.table("experiment", {
   id: bigint({ mode: "bigint" }).primaryKey().generatedAlwaysAsIdentity(),
@@ -137,25 +123,6 @@ const underscoreMake = <T extends Table>(
   table: T,
 ): DrizzleTableMapper<T, DeepenAtDelimiter<"_", MapToSelf<T>>> =>
   DrizzleTableMapper.make(table, underscoreDeepen);
-
-const createUnderscoreDrizzleMapper = <const Ts extends readonly Table[]>(
-  tables: Ts,
-) => {
-  return createDrizzleMapper(
-    tables.map(underscoreMake) as {
-      [K in keyof Ts]: DrizzleTableMapper<
-        Ts[K],
-        DeepenAtDelimiter<"_", MapToSelf<Ts[K]>>
-      >;
-    },
-  );
-};
-
-const mapper = createUnderscoreDrizzleMapper([experiment, experimentData]);
-
-const newExperiment = new Experiment({ name: "#1", timeStarted: new Date() });
-
-const db = drizzle("TBD");
 
 class Entity<
   S extends Schema.Constraint,
@@ -213,6 +180,8 @@ class Entity<
   }
 }
 
+const newExperiment = new Experiment({ name: "#1", timeStarted: new Date() });
+
 const experimentEntity = new Entity(Experiment, experiment, {
   timeEnded: OptionalOverwrites<Date>(),
 });
@@ -221,14 +190,14 @@ const experimentDataEntity = new Entity(ExperimentData, experimentData, {
   acceleration: { top: Vector3dOverwrites, bottom: Vector3dOverwrites },
 });
 
-experimentEntity.encode({ name: "#1", timeStarted: new Date() });
+const experimentId = 1n;
 
-const experimentId = (
-  await db
-    .insert(experiment)
-    .values(experimentEntity.encode(newExperiment))
-    .returning({ id: experiment.id })
-)[0]!.id;
+// const experimentId = (
+//   await db
+//     .insert(experiment)
+//     .values(experimentEntity.encode(newExperiment))
+//     .returning({ id: experiment.id })
+// )[0]!.id;
 
 const newExperimentData = new ExperimentData({
   experimentId,
@@ -237,14 +206,26 @@ const newExperimentData = new ExperimentData({
   acceleration: { top: [0, 0, 0], bottom: [0, 0, 0] },
 });
 
-await db
-  .insert(experimentData)
-  .values(experimentDataEntity.encode(newExperimentData));
+const flatExperiment = experimentEntity.encode(newExperiment);
+const flatExperimentData = experimentDataEntity.encode(newExperimentData);
 
-const data = (await db.select().from(experimentData)).map(
-  (row) => new ExperimentData(experimentDataEntity.decode(row)),
-);
+const results = [
+  flatExperiment,
+  flatExperimentData,
+  experimentEntity.decode(flatExperiment),
+  experimentDataEntity.decode(flatExperimentData),
+];
+// @ts-ignore
+console.log(results);
 
-const data2 = (await db.select().from(experiment)).map(
-  (row) => new Experiment(experimentEntity.decode(row)),
-);
+// await db
+//   .insert(experimentData)
+//   .values(experimentDataEntity.encode(newExperimentData));
+
+// const data = (await db.select().from(experimentData)).map(
+//   (row) => new ExperimentData(experimentDataEntity.decode(row)),
+// );
+
+// const data2 = (await db.select().from(experiment)).map(
+//   (row) => new Experiment(experimentEntity.decode(row)),
+// );
