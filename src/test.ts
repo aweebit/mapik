@@ -1,4 +1,5 @@
 import type { Table } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
 import {
   bigint,
   doublePrecision,
@@ -17,7 +18,10 @@ import {
   DrizzleTableMapper,
   type MapToSelf,
 } from "./drizzle.js";
-import { drizzle } from "drizzle-orm/node-postgres";
+import {
+  createTransformationMapper,
+  Transformation,
+} from "./Transformation.js";
 
 const Optional = <S extends Schema.Constraint>(schema: S) => {
   const from = Schema.Union([
@@ -52,30 +56,21 @@ const Optional = <S extends Schema.Constraint>(schema: S) => {
   );
 };
 
-const OptionalOverwrites = <T>(schema: Schema.Schema<T>) => {
-  const typeSchema = Schema.toType(schema);
-  return Schema.optional(typeSchema).pipe(
-    Schema.encodeTo(
-      Schema.NullOr(typeSchema),
-      SchemaTransformation.transform<T | undefined, T | null>({
-        encode: (val) => (val === undefined ? null : val),
-        decode: (val) => (val === null ? undefined : val),
-      }),
-    ),
-  );
-};
+const OptionalOverwrites = <T>() =>
+  new Transformation<T | undefined, T | null>({
+    encode: (val) => (val === undefined ? null : val),
+    decode: (val) => (val === null ? undefined : val),
+  });
 
 const Vector3d = Schema.Tuple([Schema.Number, Schema.Number, Schema.Number]);
 
-const Vector3dOverwrites = Vector3d.pipe(
-  Schema.encodeTo(
-    Schema.Struct({ x: Schema.Number, y: Schema.Number, z: Schema.Number }),
-    SchemaTransformation.transform({
-      encode: ([x, y, z]) => ({ x, y, z }),
-      decode: ({ x, y, z }) => [x, y, z],
-    }),
-  ),
-);
+const Vector3dOverwrites = Transformation.make<
+  typeof Vector3d.Type,
+  { x: number; y: number; z: number }
+>({
+  encode: ([x, y, z]: typeof Vector3d.Type) => ({ x, y, z }),
+  decode: ({ x, y, z }) => [x, y, z] as const,
+});
 
 class Experiment extends Schema.Class<Experiment>("Experiment")({
   name: Schema.String,
@@ -83,10 +78,10 @@ class Experiment extends Schema.Class<Experiment>("Experiment")({
   timeEnded: Optional(Schema.Date),
 }) {}
 
-const ExperimentOverwrites = Experiment.mapFields((fields) => ({
-  ...fields,
-  timeEnded: OptionalOverwrites(Schema.Date),
-}));
+const ExperimentOverwrites = createTransformationMapper<
+  Experiment,
+  Omit<Experiment, "timeEnded"> & { readonly timeEnded: Date | null }
+>()({ timeEnded: OptionalOverwrites() });
 
 class ExperimentData extends Schema.Class<ExperimentData>("ExperimentData")({
   experimentId: Schema.BigInt,
@@ -98,13 +93,15 @@ class ExperimentData extends Schema.Class<ExperimentData>("ExperimentData")({
   }),
 }) {}
 
-const ExperimentDataOverwrites = ExperimentData.mapFields((fields) => ({
-  ...fields,
-  acceleration: Schema.Struct({
-    top: Vector3dOverwrites,
-    bottom: Vector3dOverwrites,
-  }),
-}));
+const ExperimentDataOverwrites = createTransformationMapper<
+  ExperimentData,
+  Omit<ExperimentData, "acceleration"> & {
+    readonly acceleration: {
+      top: { x: number; y: number; z: number };
+      bottom: { x: number; y: number; z: number };
+    };
+  }
+>()({ acceleration: { top: Vector3dOverwrites, bottom: Vector3dOverwrites } });
 
 const experiment = snakeCase.table("experiment", {
   id: bigint({ mode: "bigint" }).primaryKey().generatedAlwaysAsIdentity(),
@@ -161,9 +158,7 @@ const experimentId = (
   await db
     .insert(experiment)
     .values(
-      mapper(experiment).flatten(
-        Schema.encodeSync(ExperimentOverwrites)(newExperiment),
-      ),
+      mapper(experiment).flatten(ExperimentOverwrites.encode(newExperiment)),
     )
     .returning({ id: experiment.id })
 )[0]!.id;
@@ -179,6 +174,18 @@ await db
   .insert(experimentData)
   .values(
     mapper(experimentData).flatten(
-      Schema.encodeSync(ExperimentDataOverwrites)(newExperimentData),
+      ExperimentDataOverwrites.encode(newExperimentData),
     ),
   );
+
+const data = (await db.select().from(experimentData)).map(
+  (row) =>
+    new ExperimentData(
+      ExperimentDataOverwrites.decode(mapper(experimentData).deepen(row)),
+    ),
+);
+
+const data2 = (await db.select().from(experiment)).map(
+  (row) =>
+    new Experiment(ExperimentOverwrites.decode(mapper(experiment).deepen(row))),
+);
