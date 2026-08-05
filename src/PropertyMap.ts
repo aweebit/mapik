@@ -4,38 +4,27 @@ import type { DeepRecord, OptionalKeyOf, ValueOf } from "./utils/types.js";
 // TODO: Allow symbols?
 export type PropertyMap = DeepRecord<string, string>; // & DeepRecord<symbol, never>
 
-// TODO: Should edges cases where empty objects appear in PM receive special
-// treatment in the constraint types? (done?)
+export type FlatKeyOf<PM extends PropertyMap> = FlatKeyOfHelper<PM>;
+
+type FlatKeyOfHelper<PM extends PropertyMap | string> = PM extends string
+  ? PM
+  : PM extends PropertyMap
+    ? { [K in keyof PM & string]: FlatKeyOfHelper<PM[K]> }[keyof PM & string]
+    : never;
+
 export type DeepConstraint<PM extends PropertyMap> = DeepConstraintHelper<PM>;
 
 type DeepConstraintHelper<PM extends PropertyMap | string> = PM extends string
   ? unknown
   : PM extends PropertyMap
-    ? PM[keyof PM & string] extends never
-      ? never
-      : Simplify<{
-          readonly [K in keyof PM & string]?: DeepConstraintHelper<PM[K]>;
-        }>
+    ? Simplify<{
+        readonly [K in keyof PM & string]?: DeepConstraintHelper<PM[K]>;
+      }>
     : never;
 
-export type FlatConstraint<PM extends PropertyMap> =
-  Simplify<FlatConstraintHelper<PM>> extends infer Result
-    ? unknown extends Result // TODO: investigate why this is necessary
-      ? never
-      : Result
-    : never;
-
-type FlatConstraintHelper<PM extends PropertyMap | string> = PM extends string
-  ? { readonly [K in PM]?: unknown }
-  : PM extends PropertyMap
-    ? PM[keyof PM & string] extends never
-      ? never
-      : UnionToIntersection<
-          {
-            [K in keyof PM & string]: FlatConstraintHelper<PM[K]>;
-          }[keyof PM & string]
-        >
-    : never;
+export type FlatConstraint<PM extends PropertyMap> = {
+  readonly [K in FlatKeyOf<PM>]?: unknown;
+};
 
 export type Flatten<
   PM extends PropertyMap,
@@ -147,7 +136,7 @@ export class Mapper<const PM extends PropertyMap> {
           if (typeof value !== "string") {
             const deeper = process(value);
             if (Object.keys(deeper).length) d[key] = deeper;
-          } else if (value in flat) d[key] = flat[value];
+          } else if (value in flat) d[key] = flat[value as keyof typeof flat];
           return d;
         },
         {},
