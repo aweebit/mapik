@@ -107,7 +107,7 @@ export namespace Constraint {
     S extends SideName,
     T,
     E,
-    TM extends AnyTransformationMap & TransformationMap<T, E>,
+    TM extends TransformationMap<T, E>,
   > =
     TM extends Transformation<T, E>
       ? PickSide<S, T, E>
@@ -126,13 +126,13 @@ export namespace Constraint {
         : never;
 
   export type Type<
-    TM extends AnyTransformationMap & TransformationMap<T, E>,
+    TM extends TransformationMap<T, E>,
     T = Infer.Type<TM>,
     E = Infer.Encoded<TM>,
   > = Side<"Type", T, E, TM>;
 
   export type Encoded<
-    TM extends AnyTransformationMap & TransformationMap<T, E>,
+    TM extends TransformationMap<T, E>,
     T = Infer.Type<TM>,
     E = Infer.Encoded<TM>,
   > = Side<"Encoded", T, E, TM>;
@@ -142,7 +142,7 @@ type Apply<
   S extends SideName,
   T,
   E,
-  TM extends AnyTransformationMap & TransformationMap<T, E>,
+  TM extends TransformationMap<T, E>,
   X extends Constraint.Side<S, T, E, TM>,
 > =
   TM extends Transformation<T, E>
@@ -167,14 +167,14 @@ type Apply<
       : never;
 
 export type Encode<
-  TM extends AnyTransformationMap & TransformationMap<T, E>,
+  TM extends TransformationMap<T, E>,
   X extends Constraint.Type<TM, T, E>,
   T = Infer.Type<TM>,
   E = Infer.Encoded<TM>,
 > = Apply<"Type", T, E, TM, X>;
 
 export type Decode<
-  TM extends AnyTransformationMap & TransformationMap<T, E>,
+  TM extends TransformationMap<T, E>,
   X extends Constraint.Encoded<TM, T, E>,
   T = Infer.Type<TM>,
   E = Infer.Encoded<TM>,
@@ -182,7 +182,7 @@ export type Decode<
 
 export class TransformationMapperFor<X> {
   decode<
-    const TM extends AnyTransformationMap & TransformationMap<T, X>,
+    const TM extends TransformationMap<T, X>,
     T = Infer.Type<
       TM,
       // @ts-expect-error
@@ -193,7 +193,7 @@ export class TransformationMapperFor<X> {
   }
 
   encode<
-    const TM extends AnyTransformationMap & TransformationMap<X, E>,
+    const TM extends TransformationMap<X, E>,
     E = Infer.Encoded<
       TM,
       // @ts-expect-error
@@ -205,7 +205,7 @@ export class TransformationMapperFor<X> {
 }
 
 export class TransformationMapper<
-  const TM extends AnyTransformationMap & TransformationMap<T, E>,
+  const TM extends TransformationMap<T, E>,
   T = Infer.Type<TM>,
   E = Infer.Encoded<TM>,
 > {
@@ -216,7 +216,7 @@ export class TransformationMapper<
   }
 
   static make<
-    const TM extends AnyTransformationMap & TransformationMap<T, E>,
+    const TM extends TransformationMap<T, E>,
     T = Infer.Type<TM>,
     E = Infer.Encoded<TM>,
   >(transformationMap: TM) {
