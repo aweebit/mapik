@@ -8,26 +8,79 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { Effect, Schema, SchemaParser, SchemaTransformation } from "effect";
+import * as Codec from "./Codec.js";
 import {
   createDeepenAtDelimiter,
   type DeepenAtDelimiter,
 } from "./deepenAtDelimiter.js";
-import { DrizzleTableMapper, type MapToSelf } from "./drizzle.js";
-import type {
-  DeepConstraint,
-  Deepen,
-  FlatConstraint,
-  Flatten,
-} from "./PropertyMap.js";
-import {
-  Transformation,
-  TransformationMapper,
-  type Constraint,
-  type Decode,
-  type Encode,
-  type Infer,
-  type TransformationMap,
-} from "./Transformation.js";
+import type * as DeepFlat from "./DeepFlat.js";
+import * as Drizzle from "./Drizzle.js";
+
+const underscoreDeepen = createDeepenAtDelimiter("_");
+
+const underscoreMake = <T extends Table>(
+  table: T,
+): Drizzle.TableMapper<T, DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>> =>
+  Drizzle.TableMapper.make(table, underscoreDeepen);
+
+class EntityManager<
+  S extends Schema.Constraint,
+  T extends Table,
+  const M extends Codec.Map<Schema.Schema.Type<S>, E>,
+  E extends DeepFlat.Constraint.Deep<
+    DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
+    InferSelectModel<T>
+  > = Codec.Infer.Encoded<M, Schema.Schema.Type<S>> extends infer E extends
+    DeepFlat.Constraint.Deep<
+      DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
+      InferSelectModel<T>
+    >
+    ? E
+    : never,
+> {
+  readonly drizzleMapper: Drizzle.TableMapper<
+    T,
+    DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>
+  >;
+
+  readonly effectMapper: Codec.Mapper<M, Schema.Schema.Type<S>, E>;
+
+  constructor(
+    readonly schema: S,
+    readonly table: T,
+    readonly map: M,
+  ) {
+    this.drizzleMapper = underscoreMake(table);
+    this.effectMapper = new Codec.Mapper(map);
+  }
+
+  encode<X extends Codec.Constraint.Type<M, Schema.Schema.Type<S>, E>>(
+    input: X,
+  ): DeepFlat.Flatten<
+    DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
+    // @ts-expect-error
+    Codec.Encode<M, X, Schema.Schema.Type<S>, E>
+  > {
+    return this.drizzleMapper.flatten(this.effectMapper.encode(input) as any);
+  }
+
+  decode<
+    X extends DeepFlat.Constraint.Flat<
+      DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
+      InferSelectModel<T>
+    >,
+  >(
+    input: X,
+  ): Codec.Decode<
+    M,
+    // @ts-expect-error
+    DeepFlat.Deepen<DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>, X>,
+    Schema.Schema.Type<S>,
+    E
+  > {
+    return this.effectMapper.decode(this.drizzleMapper.deepen(input) as any);
+  }
+}
 
 const Optional = <S extends Schema.Constraint>(schema: S) => {
   const from = Schema.Union([
@@ -58,29 +111,37 @@ const Optional = <S extends Schema.Constraint>(schema: S) => {
   );
 };
 
-const _OptionalOverwrites = new Transformation<any, any>({
+const _OptionalCodec = Codec.make<any, any>({
   encode: (val) => (val === undefined ? null : val),
   decode: (val) => (val === null ? undefined : val),
 });
 
-const OptionalOverwrites = <T>(): Transformation<T | undefined, T | null> =>
-  _OptionalOverwrites;
-
-const Vector3d = Schema.Tuple([Schema.Number, Schema.Number, Schema.Number]);
-
-const Vector3dOverwrites = Transformation.make<
-  typeof Vector3d.Type,
-  { x: number; y: number; z: number }
->({
-  encode: ([x, y, z]: typeof Vector3d.Type) => ({ x, y, z }),
-  decode: ({ x, y, z }) => [x, y, z] as const,
-});
+const OptionalCodec = <T>(): Codec.Codec<T | undefined, T | null> =>
+  _OptionalCodec;
 
 class Experiment extends Schema.Class<Experiment>("Experiment")({
   name: Schema.String,
   timeStarted: Schema.Date,
   timeEnded: Optional(Schema.Date),
 }) {}
+
+const Vector3d = Schema.Tuple([Schema.Number, Schema.Number, Schema.Number]);
+
+const Vector3dCodec = Codec.makeFor<typeof Vector3d.Type>().encode({
+  encode: ([x, y, z]) => ({ x, y, z }) as const,
+  decode: ({ x, y, z }) => [x, y, z],
+});
+
+const experimentTable = snakeCase.table("experiment", {
+  id: bigint({ mode: "bigint" }).primaryKey().generatedAlwaysAsIdentity(),
+  name: text().notNull(),
+  timeStarted: timestamp({ withTimezone: true }).notNull(),
+  timeEnded: timestamp({ withTimezone: true }),
+});
+
+const experimentEntityManager = new EntityManager(Experiment, experimentTable, {
+  timeEnded: OptionalCodec<Date>(),
+});
 
 class ExperimentData extends Schema.Class<ExperimentData>("ExperimentData")({
   experimentId: Schema.BigInt,
@@ -92,19 +153,12 @@ class ExperimentData extends Schema.Class<ExperimentData>("ExperimentData")({
   }),
 }) {}
 
-const experiment = snakeCase.table("experiment", {
-  id: bigint({ mode: "bigint" }).primaryKey().generatedAlwaysAsIdentity(),
-  name: text().notNull(),
-  timeStarted: timestamp({ withTimezone: true }).notNull(),
-  timeEnded: timestamp({ withTimezone: true }),
-});
-
-const experimentData = snakeCase.table(
+const experimentDataTable = snakeCase.table(
   "experiment_data",
   {
     experimentId: bigint({ mode: "bigint" })
       .notNull()
-      .references(() => experiment.id),
+      .references(() => experimentTable.id),
     timestamp: timestamp({ withTimezone: true }).notNull(),
     pressure: doublePrecision().notNull(),
     acceleration_top_x: doublePrecision().notNull(),
@@ -117,115 +171,32 @@ const experimentData = snakeCase.table(
   (table) => [primaryKey({ columns: [table.experimentId, table.timestamp] })],
 );
 
-const underscoreDeepen = createDeepenAtDelimiter("_");
+const experimentDataEntityManager = new EntityManager(
+  ExperimentData,
+  experimentDataTable,
+  { acceleration: { top: Vector3dCodec, bottom: Vector3dCodec } },
+);
 
-const underscoreMake = <T extends Table>(
-  table: T,
-): DrizzleTableMapper<T, DeepenAtDelimiter<"_", MapToSelf<T>>> =>
-  DrizzleTableMapper.make(table, underscoreDeepen);
-
-class Entity<
-  S extends Schema.Constraint,
-  T extends Table,
-  const TM extends TransformationMap<Schema.Schema.Type<S>, E>,
-  E extends DeepConstraint<
-    DeepenAtDelimiter<"_", MapToSelf<T>>,
-    InferSelectModel<T>
-  > = Infer.Encoded<TM, Schema.Schema.Type<S>> extends infer E extends
-    DeepConstraint<DeepenAtDelimiter<"_", MapToSelf<T>>, InferSelectModel<T>>
-    ? E
-    : never,
-> {
-  readonly drizzleMapper: DrizzleTableMapper<
-    T,
-    DeepenAtDelimiter<"_", MapToSelf<T>>
-  >;
-
-  readonly effectMapper: TransformationMapper<TM, Schema.Schema.Type<S>, E>;
-
-  constructor(
-    readonly schema: S,
-    readonly table: T,
-    readonly transformationMap: TM,
-  ) {
-    this.drizzleMapper = underscoreMake(table);
-    this.effectMapper = new TransformationMapper(transformationMap);
-  }
-
-  encode<X extends Constraint.Type<TM, Schema.Schema.Type<S>, E>>(
-    input: X,
-  ): Flatten<
-    DeepenAtDelimiter<"_", MapToSelf<T>>,
-    // @ts-expect-error
-    Encode<TM, X, Schema.Schema.Type<S>, E>
-  > {
-    return this.drizzleMapper.flatten(this.effectMapper.encode(input) as any);
-  }
-
-  decode<
-    X extends FlatConstraint<
-      DeepenAtDelimiter<"_", MapToSelf<T>>,
-      InferSelectModel<T>
-    >,
-  >(
-    input: X,
-  ): Decode<
-    TM,
-    // @ts-expect-error
-    Deepen<DeepenAtDelimiter<"_", MapToSelf<T>>, X>,
-    Schema.Schema.Type<S>,
-    E
-  > {
-    return this.effectMapper.decode(this.drizzleMapper.deepen(input) as any);
-  }
-}
-
-const newExperiment = new Experiment({ name: "#1", timeStarted: new Date() });
-
-const experimentEntity = new Entity(Experiment, experiment, {
-  timeEnded: OptionalOverwrites<Date>(),
-});
-
-const experimentDataEntity = new Entity(ExperimentData, experimentData, {
-  acceleration: { top: Vector3dOverwrites, bottom: Vector3dOverwrites },
-});
+const experiment = new Experiment({ name: "#1", timeStarted: new Date() });
 
 const experimentId = 1n;
 
-// const experimentId = (
-//   await db
-//     .insert(experiment)
-//     .values(experimentEntity.encode(newExperiment))
-//     .returning({ id: experiment.id })
-// )[0]!.id;
-
-const newExperimentData = new ExperimentData({
+const experimentData = new ExperimentData({
   experimentId,
   timestamp: new Date(),
   pressure: 0,
   acceleration: { top: [0, 0, 0], bottom: [0, 0, 0] },
 });
 
-const flatExperiment = experimentEntity.encode(newExperiment);
-const flatExperimentData = experimentDataEntity.encode(newExperimentData);
+const flatExperiment = experimentEntityManager.encode(experiment);
+const flatExperimentData = experimentDataEntityManager.encode(experimentData);
 
 const results = [
   flatExperiment,
   flatExperimentData,
-  experimentEntity.decode(flatExperiment),
-  experimentDataEntity.decode(flatExperimentData),
+  experimentEntityManager.decode(flatExperiment),
+  experimentDataEntityManager.decode(flatExperimentData),
 ];
+
 // @ts-ignore
 console.log(results);
-
-// await db
-//   .insert(experimentData)
-//   .values(experimentDataEntity.encode(newExperimentData));
-
-// const data = (await db.select().from(experimentData)).map(
-//   (row) => new ExperimentData(experimentDataEntity.decode(row)),
-// );
-
-// const data2 = (await db.select().from(experiment)).map(
-//   (row) => new Experiment(experimentEntity.decode(row)),
-// );

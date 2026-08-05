@@ -5,13 +5,12 @@ import {
   type TableConfig,
 } from "drizzle-orm";
 import {
-  PropertyMapper,
-  type DeepConstraint,
+  Mapper,
+  type Constraint,
   type Deepen,
-  type FlatConstraint,
   type Flatten,
-  type PropertyMap,
-} from "./PropertyMap.js";
+  type Map,
+} from "./DeepFlat.js";
 
 type IdentityMap<K extends PropertyKey> = { [P in K]: P } & {};
 
@@ -32,39 +31,36 @@ export const mapToSelf = <T extends Table>(table: T): MapToSelf<T> => {
   );
 };
 
-export class DrizzleTableMapper<
+export class TableMapper<
   T extends Table,
-  const PM extends PropertyMap<keyof InferSelectModel<T>>,
+  const M extends Map<keyof InferSelectModel<T>>,
 > {
-  protected readonly mapper: PropertyMapper<PM>;
+  protected readonly mapper: Mapper<M>;
 
   protected constructor(
     readonly table: T,
-    readonly propertyMap: PM,
+    readonly map: M,
   ) {
-    this.mapper = new PropertyMapper(this.propertyMap);
+    this.mapper = new Mapper(map);
 
     this.flatten = this.flatten.bind(this);
     this.deepen = this.deepen.bind(this);
   }
 
-  static make<T extends Table>(table: T): DrizzleTableMapper<T, MapToSelf<T>>;
-  static make<
-    T extends Table,
-    const PM extends PropertyMap<keyof InferSelectModel<T>>,
-  >(
+  static make<T extends Table>(table: T): TableMapper<T, MapToSelf<T>>;
+  static make<T extends Table, const M extends Map<keyof InferSelectModel<T>>>(
     table: T,
-    derivePropertyMap: (identityMap: MapToSelf<T>) => PM,
-  ): DrizzleTableMapper<T, PM>;
-  static make<
-    T extends Table,
-    const PM extends PropertyMap<keyof InferSelectModel<T>>,
-  >(table: T, propertyMap: PM): DrizzleTableMapper<T, PM>;
-  static make<
-    T extends Table,
-    const PM extends PropertyMap<keyof InferSelectModel<T>>,
-  >(table: T, propertyMap?: PM | ((identityMap: MapToSelf<T>) => PM)) {
-    return new DrizzleTableMapper(
+    derivePropertyMap: (identityMap: MapToSelf<T>) => M,
+  ): TableMapper<T, M>;
+  static make<T extends Table, const M extends Map<keyof InferSelectModel<T>>>(
+    table: T,
+    propertyMap: M,
+  ): TableMapper<T, M>;
+  static make<T extends Table, const M extends Map<keyof InferSelectModel<T>>>(
+    table: T,
+    propertyMap?: M | ((identityMap: MapToSelf<T>) => M),
+  ) {
+    return new TableMapper(
       table,
       typeof propertyMap === "function"
         ? propertyMap(mapToSelf(table))
@@ -72,26 +68,26 @@ export class DrizzleTableMapper<
     );
   }
 
-  flatten<D extends DeepConstraint<PM, InferSelectModel<T>>>(
+  flatten<D extends Constraint.Deep<M, InferSelectModel<T>>>(
     deep: D,
-  ): Flatten<PM, D> {
+  ): Flatten<M, D> {
     return this.mapper.flatten(deep);
   }
 
-  deepen<F extends FlatConstraint<PM, InferSelectModel<T>>>(
+  deepen<F extends Constraint.Flat<M, InferSelectModel<T>>>(
     flat: F,
-  ): Deepen<PM, F> {
+  ): Deepen<M, F> {
     return this.mapper.deepen(flat);
   }
 }
 
 type GetTableMapper<
-  TMs extends readonly DrizzleTableMapper<Table, any>[],
+  TMs extends readonly TableMapper<Table, any>[],
   T extends TMs[number]["table"],
 > = { [K in keyof TMs]: T extends TMs[K]["table"] ? TMs[K] : never }[number];
 
-export function createDrizzleMapper<
-  const TMs extends readonly DrizzleTableMapper<Table, any>[],
+export function createMapper<
+  const TMs extends readonly TableMapper<Table, any>[],
 >(tableMappers: TMs) {
   const tableMapperMap = new WeakMap(
     tableMappers.map((tableMapper) => [tableMapper.table, tableMapper]),
