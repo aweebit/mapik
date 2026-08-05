@@ -129,7 +129,7 @@ export class Mapper<const PM extends PropertyMap> {
     return flat as Flatten<PM, D>;
   }
 
-  deepen<I extends FlatConstraint<PM>>(flat: I): Deepen<PM, I> {
+  deepen<F extends FlatConstraint<PM>>(flat: F): Deepen<PM, F> {
     const process = (pm: PropertyMap): Record<string, unknown> => {
       return Object.entries(pm).reduce<Record<string, unknown>>(
         (d, [key, value]) => {
@@ -142,6 +142,6 @@ export class Mapper<const PM extends PropertyMap> {
         {},
       );
     };
-    return process(this.propertyMap) as Deepen<PM, I>;
+    return process(this.propertyMap) as Deepen<PM, F>;
   }
 }
