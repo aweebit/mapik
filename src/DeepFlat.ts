@@ -5,7 +5,7 @@ import type {
   Simplify,
   UnionToIntersection,
   ValueOf,
-} from "./utils/types.js";
+} from "./utils/index.js";
 
 // TODO: Allow symbols?
 export type Map<FK extends PropertyKey = string> = DeepRecord<

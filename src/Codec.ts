@@ -3,7 +3,7 @@ import type {
   MutuallyAssignable,
   Simplify,
   ValueOf,
-} from "./utils/types.js";
+} from "./utils/index.js";
 
 export type Config<T, E = T> = {
   readonly decode: (input: E) => T;

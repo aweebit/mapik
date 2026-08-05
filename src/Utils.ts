@@ -3,7 +3,7 @@ import type {
   PropagateRequired,
   UnionToIntersection,
   ValueOf,
-} from "./utils/types.js";
+} from "./utils/index.js";
 
 export type DeepenAtDelimiter<
   D extends string,
