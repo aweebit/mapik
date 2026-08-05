@@ -42,13 +42,6 @@ type PropertyMapFlatConstraintHelper<PM extends PropertyMap | string> =
           >
       : never;
 
-type X = PropertyMapDeepConstraint<{
-  a: { b: "ab" };
-  c: "c";
-}>;
-
-// TODO: Preserve optionality + No undefined due to lookup!
-
 export type PropertyMapFlatten<
   PM extends PropertyMap,
   D extends PropertyMapDeepConstraint<PM>,
@@ -83,24 +76,6 @@ type PropertyMapFlattenHelper<
     : never;
 }[keyof PM & keyof D & string];
 
-type Y = PropertyMapFlatten<
-  {
-    a: { b: "ab" };
-    c: { d: "cd" };
-    r: { r: "rr" };
-    f: "ff";
-    nested: { value: "value" };
-  },
-  {
-    a: { b?: {} };
-    c?: { d: {} };
-    r: { r: {} };
-    f?: { r: {} };
-    nested?: {};
-    another?: {};
-  }
->;
-
 export type PropertyMapDeepen<
   PM extends PropertyMap,
   F extends PropertyMapFlatConstraint<PM>,
@@ -116,7 +91,7 @@ type KeyOfExceptRequiredNever<T> = {
 
 type RemoveRequiredNever<T> = Pick<T, KeyOfExceptRequiredNever<T>>;
 
-type TargetKey<PM extends PropertyMap, FK> = {
+type MapFlatKeyBack<PM extends PropertyMap, FK> = {
   [K in keyof PM & string]: PM[K] extends infer PMV
     ? PMV extends FK
       ? K
@@ -130,7 +105,7 @@ type PropertyMapDeepenHelper<
   FK extends keyof F = keyof F & PM[string],
 > = Simplify<
   {
-    -readonly [K in FK as TargetKey<PM, K>]: F[K];
+    -readonly [K in FK as MapFlatKeyBack<PM, K>]: F[K];
   } & (RemoveRequiredNever<{
     [K in keyof PM & string]: PM[K] extends infer PMV
       ? PMV extends PropertyMap
@@ -149,13 +124,6 @@ type PropertyMapDeepenHelper<
 type ExtractKeysToRequire<T> = {
   [K in keyof T]-?: keyof T[K] extends OptionalKeyOf<T[K]> ? never : K;
 }[keyof T];
-
-type Z = PropertyMapDeepen<
-  { a: { b: "ab" }; r: { r: "rr" }; f: "ff" },
-  { ab?: {}; rr: {}; ff?: { r: {} }; another?: {} }
->;
-
-type ZZ = PropertyMapDeepen<{ a: { b: "ab"; c: "ac" } }, { ab?: {}; ac: {} }>;
 
 export class FlatPropertyMapper<const PM extends PropertyMap> {
   constructor(readonly propertyMap: PM) {}
