@@ -1,4 +1,3 @@
-import type { InferSelectModel, Table } from "drizzle-orm";
 import {
   bigint,
   doublePrecision,
@@ -9,97 +8,9 @@ import {
 } from "drizzle-orm/pg-core";
 import { Effect, Schema, SchemaParser, SchemaTransformation } from "effect";
 import * as Codec from "./Codec.js";
-import {
-  createDeepenAtDelimiter,
-  type DeepenAtDelimiter,
-} from "./deepenAtDelimiter.js";
-import type * as DeepFlat from "./DeepFlat.js";
-import * as Drizzle from "./Drizzle.js";
+import { createEntityManagerClass } from "./EntityManager.js";
 
-const underscoreDeepen = createDeepenAtDelimiter("_");
-
-const underscoreMake = <T extends Table>(
-  table: T,
-): Drizzle.TableMapper<T, DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>> =>
-  Drizzle.TableMapper.make(table, underscoreDeepen);
-
-class EntityManager<
-  A,
-  T extends Table,
-  const M extends Codec.Map<A, B>,
-  B extends DeepFlat.Constraint.Deep<
-    DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
-    InferSelectModel<T>
-  > = Codec.Infer.Encoded<M, A> extends infer B extends
-    DeepFlat.Constraint.Deep<
-      DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
-      InferSelectModel<T>
-    >
-    ? B
-    : never,
-> {
-  readonly drizzleMapper: Drizzle.TableMapper<
-    T,
-    DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>
-  >;
-
-  readonly effectMapper: Codec.Mapper<M, A, B>;
-
-  protected constructor(
-    readonly table: T,
-    readonly map: M,
-  ) {
-    this.drizzleMapper = underscoreMake(table);
-    this.effectMapper = new Codec.Mapper(map);
-  }
-
-  static make<A>() {
-    return <
-      T extends Table,
-      const M extends Codec.Map<A, B>,
-      B extends DeepFlat.Constraint.Deep<
-        DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
-        InferSelectModel<T>
-      > = Codec.Infer.Encoded<M, A> extends infer B extends
-        DeepFlat.Constraint.Deep<
-          DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
-          InferSelectModel<T>
-        >
-        ? B
-        : never,
-    >(
-      table: T,
-      map: M,
-    ) => new EntityManager<A, T, M, B>(table, map);
-  }
-
-  encode<X extends Codec.Constraint.Type<M, A, B>>(
-    input: X,
-  ): DeepFlat.Flatten<
-    DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
-    // @ts-expect-error
-    Codec.Encode<M, X, A, B>
-  > {
-    return this.drizzleMapper.flatten(this.effectMapper.encode(input) as any);
-  }
-
-  decode<
-    X extends DeepFlat.Constraint.Flat<
-      DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
-      InferSelectModel<T>
-    >,
-  >(
-    input: X,
-  ): Codec.Decode<
-    M,
-    // @ts-expect-error
-    DeepFlat.Deepen<DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>, X>,
-    A,
-    B
-  > {
-    return this.effectMapper.decode(this.drizzleMapper.deepen(input) as any);
-  }
-}
+const EntityManager = createEntityManagerClass("_");
 
 const Optional = <S extends Schema.Constraint>(schema: S) => {
   const from = Schema.Union([
