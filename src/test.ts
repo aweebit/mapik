@@ -24,18 +24,18 @@ const underscoreMake = <T extends Table>(
   Drizzle.TableMapper.make(table, underscoreDeepen);
 
 class EntityManager<
-  S extends Schema.Constraint,
+  A,
   T extends Table,
-  const M extends Codec.Map<Schema.Schema.Type<S>, E>,
-  E extends DeepFlat.Constraint.Deep<
+  const M extends Codec.Map<A, B>,
+  B extends DeepFlat.Constraint.Deep<
     DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
     InferSelectModel<T>
-  > = Codec.Infer.Encoded<M, Schema.Schema.Type<S>> extends infer E extends
+  > = Codec.Infer.Encoded<M, A> extends infer B extends
     DeepFlat.Constraint.Deep<
       DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
       InferSelectModel<T>
     >
-    ? E
+    ? B
     : never,
 > {
   readonly drizzleMapper: Drizzle.TableMapper<
@@ -43,10 +43,9 @@ class EntityManager<
     DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>
   >;
 
-  readonly effectMapper: Codec.Mapper<M, Schema.Schema.Type<S>, E>;
+  readonly effectMapper: Codec.Mapper<M, A, B>;
 
-  constructor(
-    readonly schema: S,
+  protected constructor(
     readonly table: T,
     readonly map: M,
   ) {
@@ -54,12 +53,32 @@ class EntityManager<
     this.effectMapper = new Codec.Mapper(map);
   }
 
-  encode<X extends Codec.Constraint.Type<M, Schema.Schema.Type<S>, E>>(
+  static make<A>() {
+    return <
+      T extends Table,
+      const M extends Codec.Map<A, B>,
+      B extends DeepFlat.Constraint.Deep<
+        DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
+        InferSelectModel<T>
+      > = Codec.Infer.Encoded<M, A> extends infer B extends
+        DeepFlat.Constraint.Deep<
+          DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
+          InferSelectModel<T>
+        >
+        ? B
+        : never,
+    >(
+      table: T,
+      map: M,
+    ) => new EntityManager<A, T, M, B>(table, map);
+  }
+
+  encode<X extends Codec.Constraint.Type<M, A, B>>(
     input: X,
   ): DeepFlat.Flatten<
     DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
     // @ts-expect-error
-    Codec.Encode<M, X, Schema.Schema.Type<S>, E>
+    Codec.Encode<M, X, A, B>
   > {
     return this.drizzleMapper.flatten(this.effectMapper.encode(input) as any);
   }
@@ -75,8 +94,8 @@ class EntityManager<
     M,
     // @ts-expect-error
     DeepFlat.Deepen<DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>, X>,
-    Schema.Schema.Type<S>,
-    E
+    A,
+    B
   > {
     return this.effectMapper.decode(this.drizzleMapper.deepen(input) as any);
   }
@@ -139,9 +158,10 @@ const experimentTable = snakeCase.table("experiment", {
   timeEnded: timestamp({ withTimezone: true }),
 });
 
-const experimentEntityManager = new EntityManager(Experiment, experimentTable, {
-  timeEnded: OptionalCodec<Date>(),
-});
+const experimentEntityManager = EntityManager.make<Experiment>()(
+  experimentTable,
+  { timeEnded: OptionalCodec<Date>() },
+);
 
 class ExperimentData extends Schema.Class<ExperimentData>("ExperimentData")({
   experimentId: Schema.BigInt,
@@ -171,8 +191,7 @@ const experimentDataTable = snakeCase.table(
   (table) => [primaryKey({ columns: [table.experimentId, table.timestamp] })],
 );
 
-const experimentDataEntityManager = new EntityManager(
-  ExperimentData,
+const experimentDataEntityManager = EntityManager.make<ExperimentData>()(
   experimentDataTable,
   { acceleration: { top: Vector3dCodec, bottom: Vector3dCodec } },
 );
