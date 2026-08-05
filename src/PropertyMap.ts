@@ -22,9 +22,12 @@ type PropertyMapDeepConstraintHelper<PM extends PropertyMap | string> =
           }>
       : never;
 
-export type PropertyMapFlatConstraint<PM extends PropertyMap> = Simplify<
-  PropertyMapFlatConstraintHelper<PM>
->;
+export type PropertyMapFlatConstraint<PM extends PropertyMap> =
+  Simplify<PropertyMapFlatConstraintHelper<PM>> extends infer Result
+    ? unknown extends Result // TODO: investigate why this is necessary
+      ? never
+      : Result
+    : never;
 
 type PropertyMapFlatConstraintHelper<PM extends PropertyMap | string> =
   PM extends string
@@ -154,38 +157,40 @@ type Z = PropertyMapDeepen<
 
 type ZZ = PropertyMapDeepen<{ a: { b: "ab"; c: "ac" } }, { ab?: {}; ac: {} }>;
 
-function transformFromPropertyMap<const PM extends PropertyMap>(
-  propertyMap: PM,
-) {
-  return {
-    flatten: <I extends PropertyMapDeepConstraint<PM>>(
-      input: I,
-    ): PropertyMapFlatten<PM, I> => {
-      const result: Record<string, unknown> = {};
-      const process = (pm: PropertyMap, i: Record<string, unknown>) => {
-        Object.entries(pm).forEach(([key, value]) => {
-          if (typeof value === "string") result[value] = i[key];
-          else process(value, i[key] as Record<string, unknown>);
-        });
-      };
-      process(propertyMap, input);
-      return result as PropertyMapFlatten<PM, I>;
-    },
-    deepen: <I extends PropertyMapFlatConstraint<PM>>(
-      input: I,
-    ): PropertyMapDeepen<PM, I> => {
-      const process = (pm: PropertyMap): DeepRecord<string, unknown> => {
-        return Object.fromEntries(
-          Object.entries(pm).map(([key, value]) => [
-            key,
-            typeof value === "string" ? (input as any)[value] : process(value),
-          ]),
-        );
-      };
-      return process(propertyMap) as PropertyMapDeepen<PM, I>;
-    },
-  };
-}
+export class FlatPropertyMapper<const PM extends PropertyMap> {
+  constructor(readonly propertyMap: PM) {}
 
-const transform = transformFromPropertyMap({ a: { b: "ab" }, c: "c" });
-const res = transform.flatten({ a: { b: 123 }, c: false });
+  flatten<D extends PropertyMapDeepConstraint<PM>>(
+    deep: D,
+  ): PropertyMapFlatten<PM, D> {
+    const flat: Record<string, unknown> = {};
+    const process = (pm: PropertyMap, d: Record<string, unknown>) => {
+      Object.entries(pm).forEach(([key, value]) => {
+        if (key in d) {
+          if (typeof value === "string") flat[value] = d[key];
+          else process(value, d[key] as Record<string, unknown>);
+        }
+      });
+    };
+    process(this.propertyMap, deep);
+    return flat as PropertyMapFlatten<PM, D>;
+  }
+
+  deepen<I extends PropertyMapFlatConstraint<PM>>(
+    flat: I,
+  ): PropertyMapDeepen<PM, I> {
+    const process = (pm: PropertyMap): Record<string, unknown> => {
+      return Object.entries(pm).reduce<Record<string, unknown>>(
+        (d, [key, value]) => {
+          if (typeof value !== "string") {
+            const deeper = process(value);
+            if (Object.keys(deeper).length) d[key] = deeper;
+          } else if (value in flat) d[key] = flat[value];
+          return d;
+        },
+        {},
+      );
+    };
+    return process(this.propertyMap) as PropertyMapDeepen<PM, I>;
+  }
+}
