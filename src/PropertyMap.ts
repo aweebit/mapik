@@ -1,10 +1,5 @@
 import type { Simplify, UnionToIntersection } from "effect/Types";
-import type {
-  DeclaredValueOf,
-  DeepRecord,
-  MutuallyAssignable,
-  OptionalKeyOf,
-} from "./utils.js";
+import type { DeepRecord, OptionalKeyOf, ValueOf } from "./utils/types.js";
 
 // TODO: Allow symbols?
 export type PropertyMap = DeepRecord<string, string>; // & DeepRecord<symbol, never>
@@ -33,7 +28,7 @@ export type PropertyMapFlatConstraint<PM extends PropertyMap> = Simplify<
 
 type PropertyMapFlatConstraintHelper<PM extends PropertyMap | string> =
   PM extends string
-    ? { readonly [P in PM]?: unknown }
+    ? { readonly [K in PM]?: unknown }
     : PM extends PropertyMap
       ? PM[keyof PM & string] extends never
         ? never
@@ -66,13 +61,13 @@ type PropertyMapFlattenHelper<
   PM extends PropertyMap,
   D extends PropertyMapDeepConstraint<PM>,
   O extends boolean = false, // inherited optionality
-  K extends keyof PM & keyof D & string = keyof PM & keyof D & string,
-> = K extends unknown
-  ? [
-      PM[K],
-      DeclaredValueOf<D, K>,
-      K extends OptionalKeyOf<D, K> ? true : false,
-    ] extends [infer PMV, infer DV, infer KO extends boolean]
+> = {
+  [K in keyof PM & keyof D & string]: [
+    PM[K],
+    ValueOf<D, K>, // somehow undefined doesn't mess things up
+    // even without ValueOf ¯\_(ツ)_/¯ But we choose to not rely on that.
+    K extends OptionalKeyOf<D, K> ? true : false,
+  ] extends [infer PMV, infer DV, infer KO extends boolean]
     ? PMV extends string
       ? true extends O | KO
         ? { [P in PMV]?: DV }
@@ -82,8 +77,8 @@ type PropertyMapFlattenHelper<
           ? PropertyMapFlattenHelper<PMV, DV, O | KO>
           : never
         : never
-    : never
-  : never;
+    : never;
+}[keyof PM & keyof D & string];
 
 type Y = PropertyMapFlatten<
   {
@@ -112,66 +107,52 @@ export type PropertyMapDeepen<
     : never
   : never;
 
-declare const $never: unique symbol;
-type $never = typeof $never;
-
-type $neverKeys<T> = {
-  [K in keyof T]: MutuallyAssignable<T[K], $never> extends true ? never : K;
+type KeyOfExceptRequiredNever<T> = {
+  [K in keyof T]-?: T[K] extends never ? never : K;
 }[keyof T];
 
-type Remove$never<T, K extends keyof T = $neverKeys<T>> = {
-  [P in K]: T[P];
-};
+type RemoveRequiredNever<T> = Pick<T, KeyOfExceptRequiredNever<T>>;
+
+type TargetKey<PM extends PropertyMap, FK> = {
+  [K in keyof PM & string]: PM[K] extends infer PMV
+    ? PMV extends FK
+      ? K
+      : never
+    : never;
+}[keyof PM & string];
 
 type PropertyMapDeepenHelper<
   PM extends PropertyMap,
   F extends PropertyMapFlatConstraint<PM>,
+  FK extends keyof F = keyof F & PM[string],
 > = Simplify<
-  Remove$never<{
-    // TODO: preserve readonly / (!!!) optionality
-    -readonly [K in keyof PM & string]-?: PM[K] extends infer PMV
-      ? PMV extends string
-        ? PMV extends keyof F
-          ? DeclaredValueOf<F, PMV>
-          : $never
-        : PMV extends PropertyMap
-          ? F extends PropertyMapFlatConstraint<PMV>
-            ? PropertyMapDeepenHelper<PMV, F> extends infer Result
-              ? keyof Result extends never
-                ? $never
-                : Result
-              : never
-            : $never
-          : $never
-      : $never;
-  }>
+  {
+    -readonly [K in FK as TargetKey<PM, K>]: F[K];
+  } & (RemoveRequiredNever<{
+    [K in keyof PM & string]: PM[K] extends infer PMV
+      ? PMV extends PropertyMap
+        ? F extends PropertyMapFlatConstraint<PMV>
+          ? PropertyMapDeepenHelper<PMV, F>
+          : never
+        : never
+      : never;
+  }> extends infer Result
+    ? { [K in ExtractKeysToRequire<Result>]: Result[K] } & {
+        [K in Exclude<keyof Result, ExtractKeysToRequire<Result>>]?: Result[K];
+      }
+    : never)
 >;
 
-type Z = PropertyMapDeepen<{ a: { b: "ab" }; c: "c" }, { ab?: never }>;
+type ExtractKeysToRequire<T> = {
+  [K in keyof T]-?: keyof T[K] extends OptionalKeyOf<T[K]> ? never : K;
+}[keyof T];
 
-// // This probably won't work because the property value types are affected
+type Z = PropertyMapDeepen<
+  { a: { b: "ab" }; r: { r: "rr" }; f: "ff" },
+  { ab?: {}; rr: {}; ff?: { r: {} }; another?: {} }
+>;
 
-// type PropagateOptionalDown<T, OKey = OptionalKeyOf<T>> = {
-//   [K in keyof T];
-// };
-
-// export type Callable = (...args: never) => unknown;
-
-// export type DeepPartial<T> = T extends Callable | Date | RegExp
-//   ? T
-//   : T extends Map<infer K, infer V>
-//     ? Map<DeepPartial<K>, DeepPartial<V>>
-//     : T extends ReadonlyMap<infer K, infer V>
-//       ? ReadonlyMap<DeepPartial<K>, DeepPartial<V>>
-//       : T extends Set<infer U>
-//         ? Set<DeepPartial<U>>
-//         : T extends ReadonlySet<infer U>
-//           ? ReadonlySet<DeepPartial<U>>
-//           : T extends readonly unknown[]
-//             ? { [K in keyof T]: DeepPartial<T[K]> }
-//             : T extends object
-//               ? { [K in keyof T]?: DeepPartial<T[K]> }
-//               : T;
+type ZZ = PropertyMapDeepen<{ a: { b: "ab"; c: "ac" } }, { ab?: {}; ac: {} }>;
 
 function transformFromPropertyMap<const PM extends PropertyMap>(
   propertyMap: PM,
