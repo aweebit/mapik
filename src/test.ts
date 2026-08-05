@@ -1,4 +1,10 @@
-import type { InferSelectModel, Table } from "drizzle-orm";
+import type {
+  Column,
+  ColumnBaseConfig,
+  ColumnType,
+  InferSelectModel,
+  Table,
+} from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import {
   bigint,
@@ -18,6 +24,13 @@ import {
   DrizzleTableMapper,
   type MapToSelf,
 } from "./drizzle.js";
+import type {
+  DeepConstraint,
+  Deepen,
+  FlatConstraint,
+  Flatten,
+  PropertyMap,
+} from "./PropertyMap.js";
 import {
   Transformation,
   TransformationMapper,
@@ -27,7 +40,7 @@ import {
   type Infer,
   type TransformationMap,
 } from "./Transformation.js";
-import type { Deepen, FlatConstraint, Flatten } from "./PropertyMap.js";
+import type { ValueOf } from "./utils/types.js";
 
 const Optional = <S extends Schema.Constraint>(schema: S) => {
   const from = Schema.Union([
@@ -152,15 +165,31 @@ const newExperiment = new Experiment({ name: "#1", timeStarted: new Date() });
 
 const db = drizzle("TBD");
 
+type InferTableConstraint<
+  PM extends PropertyMap,
+  D extends DeepConstraint<PM>,
+  F = Flatten<PM, D>,
+> = {
+  readonly [K in keyof F]-?: Column<
+    ColumnBaseConfig<ColumnType> & { data: ValueOf<F, K> }
+  >;
+};
+
 class Entity<
   const TM extends TransformationMap<Schema.Schema.Type<S>, E>,
   S extends Schema.Constraint,
   T extends Table,
-  E = Infer.Encoded<
-    TM,
-    // @ts-expect-error
-    Schema.Schema.Type<S>
-  >,
+  E extends DeepConstraint<DeepenAtDelimiter<"_", MapToSelf<T>>> =
+    // TODO: Clean up this mess
+    Infer.Encoded<
+      TM,
+      // @ts-expect-error
+      Schema.Schema.Type<S>
+    > extends infer E extends DeepConstraint<
+      DeepenAtDelimiter<"_", MapToSelf<T>>
+    >
+      ? E
+      : never,
 > {
   readonly drizzleMapper: DrizzleTableMapper<
     T,
@@ -171,7 +200,8 @@ class Entity<
 
   constructor(
     readonly schema: S,
-    readonly table: T,
+    readonly table: T & // TODO: How to enforce this on the type parameter level?
+      InferTableConstraint<DeepenAtDelimiter<"_", MapToSelf<T>>, E>,
     readonly transformationMap: TM,
   ) {
     this.drizzleMapper = underscoreMake(table);
