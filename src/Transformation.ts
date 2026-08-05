@@ -46,17 +46,17 @@ export namespace Infer {
           >
         : never;
 
-  export type Type<
-    TM extends AnyTransformationMap,
-    E extends Encoded<TM> = // @ts-expect-error
-      unknown,
-  > = Side<"Type", TM, E>;
+  export type Type<TM extends AnyTransformationMap, E = unknown> = Side<
+    "Type",
+    TM,
+    E
+  >;
 
-  export type Encoded<
-    TM extends AnyTransformationMap,
-    T extends Type<TM> = // @ts-expect-error
-      unknown,
-  > = Side<"Encoded", TM, T>;
+  export type Encoded<TM extends AnyTransformationMap, T = unknown> = Side<
+    "Encoded",
+    TM,
+    T
+  >;
 }
 
 export type TransformationMap<T, E = T> =
@@ -181,25 +181,15 @@ export type Decode<
 > = Apply<"Encoded", T, E, TM, X>;
 
 export class TransformationMapperFor<X> {
-  decode<
-    const TM extends TransformationMap<T, X>,
-    T = Infer.Type<
-      TM,
-      // @ts-expect-error
-      X
-    >,
-  >(transformationMap: TM) {
+  decode<const TM extends TransformationMap<T, X>, T = Infer.Type<TM, X>>(
+    transformationMap: TM,
+  ) {
     return new TransformationMapper<TM, T, X>(transformationMap);
   }
 
-  encode<
-    const TM extends TransformationMap<X, E>,
-    E = Infer.Encoded<
-      TM,
-      // @ts-expect-error
-      X
-    >,
-  >(transformationMap: TM) {
+  encode<const TM extends TransformationMap<X, E>, E = Infer.Encoded<TM, X>>(
+    transformationMap: TM,
+  ) {
     return new TransformationMapper<TM, X, E>(transformationMap);
   }
 }

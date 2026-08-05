@@ -1,4 +1,4 @@
-import type { InferSelectModel, Table } from "drizzle-orm";
+import type { InferSelectModel, Table, TableConfig } from "drizzle-orm";
 import {
   PropertyMapper,
   type DeepConstraint,
@@ -16,7 +16,10 @@ const identityMap = <const Ks extends readonly PropertyKey[]>(keys: Ks) => {
   >;
 };
 
-export type MapToSelf<T extends Table> = IdentityMap<keyof InferSelectModel<T>>;
+export type MapToSelf<T extends Table> = IdentityMap<
+  keyof (T extends Table<TableConfig<infer TColumns>> ? TColumns : never) &
+    string
+> & {};
 
 export const mapToSelf = <T extends Table>(table: T): MapToSelf<T> => {
   return identityMap(
