@@ -2,7 +2,10 @@ import type { Simplify, UnionToIntersection } from "effect/Types";
 import type { DeepRecord, OptionalKeyOf, ValueOf } from "./utils/types.js";
 
 // TODO: Allow symbols?
-export type PropertyMap = DeepRecord<string, string>; // & DeepRecord<symbol, never>
+export type PropertyMap<FK extends PropertyKey = string> = DeepRecord<
+  string,
+  FK & string
+>;
 
 export type FlatKeyOf<PM extends PropertyMap> = FlatKeyOfHelper<PM>;
 
@@ -12,19 +15,26 @@ type FlatKeyOfHelper<PM extends PropertyMap | string> = PM extends string
     ? { [K in keyof PM & string]: FlatKeyOfHelper<PM[K]> }[keyof PM & string]
     : never;
 
-export type DeepConstraint<PM extends PropertyMap> = DeepConstraintHelper<PM>;
+export type DeepConstraint<
+  PM extends PropertyMap,
+  F extends FlatConstraint<PM> = FlatConstraint<PM>,
+> = DeepConstraintHelper<PM, F>;
 
-type DeepConstraintHelper<PM extends PropertyMap | string> = PM extends string
-  ? unknown
+type DeepConstraintHelper<
+  PM extends PropertyMap | string,
+  F extends Record<string, unknown>,
+> = PM extends string
+  ? ValueOf<F, PM>
   : PM extends PropertyMap
     ? Simplify<{
-        readonly [K in keyof PM & string]?: DeepConstraintHelper<PM[K]>;
+        readonly [K in keyof PM & string]?: DeepConstraintHelper<PM[K], F>;
       }>
     : never;
 
-export type FlatConstraint<PM extends PropertyMap> = {
-  readonly [K in FlatKeyOf<PM>]?: unknown;
-};
+export type FlatConstraint<
+  PM extends PropertyMap,
+  F extends FlatConstraint<PM> = { readonly [K in FlatKeyOf<PM>]?: unknown },
+> = { readonly [K in FlatKeyOf<PM>]?: ValueOf<F, K> };
 
 export type Flatten<
   PM extends PropertyMap,
