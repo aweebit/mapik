@@ -19,8 +19,9 @@ import {
   type MapToSelf,
 } from "./drizzle.js";
 import {
-  createTransformationMapper,
   Transformation,
+  TransformationMapper,
+  type Infer,
 } from "./Transformation.js";
 
 const Optional = <S extends Schema.Constraint>(schema: S) => {
@@ -56,11 +57,13 @@ const Optional = <S extends Schema.Constraint>(schema: S) => {
   );
 };
 
-const OptionalOverwrites = <T>() =>
-  new Transformation<T | undefined, T | null>({
-    encode: (val) => (val === undefined ? null : val),
-    decode: (val) => (val === null ? undefined : val),
-  });
+const _OptionalOverwrites = new Transformation<any, any>({
+  encode: (val) => (val === undefined ? null : val),
+  decode: (val) => (val === null ? undefined : val),
+});
+
+const OptionalOverwrites = <T>(): Transformation<T | undefined, T | null> =>
+  _OptionalOverwrites;
 
 const Vector3d = Schema.Tuple([Schema.Number, Schema.Number, Schema.Number]);
 
@@ -78,10 +81,14 @@ class Experiment extends Schema.Class<Experiment>("Experiment")({
   timeEnded: Optional(Schema.Date),
 }) {}
 
-const ExperimentOverwrites = createTransformationMapper<
-  Experiment,
-  Omit<Experiment, "timeEnded"> & { readonly timeEnded: Date | null }
->()({ timeEnded: OptionalOverwrites() });
+const transformationMap = { timeEnded: OptionalOverwrites<Date>() };
+
+const ExperimentOverwrites = TransformationMapper.for<Experiment>().encode({
+  timeEnded: OptionalOverwrites<Date>(),
+});
+
+type A = Infer.Type<typeof transformationMap>;
+type AA = Infer.Encoded<typeof transformationMap, Experiment>;
 
 class ExperimentData extends Schema.Class<ExperimentData>("ExperimentData")({
   experimentId: Schema.BigInt,
@@ -93,15 +100,10 @@ class ExperimentData extends Schema.Class<ExperimentData>("ExperimentData")({
   }),
 }) {}
 
-const ExperimentDataOverwrites = createTransformationMapper<
-  ExperimentData,
-  Omit<ExperimentData, "acceleration"> & {
-    readonly acceleration: {
-      top: { x: number; y: number; z: number };
-      bottom: { x: number; y: number; z: number };
-    };
-  }
->()({ acceleration: { top: Vector3dOverwrites, bottom: Vector3dOverwrites } });
+const ExperimentDataOverwrites =
+  TransformationMapper.for<ExperimentData>().encode({
+    acceleration: { top: Vector3dOverwrites, bottom: Vector3dOverwrites },
+  });
 
 const experiment = snakeCase.table("experiment", {
   id: bigint({ mode: "bigint" }).primaryKey().generatedAlwaysAsIdentity(),

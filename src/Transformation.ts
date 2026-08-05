@@ -5,27 +5,23 @@ import type {
   ValueOf,
 } from "./utils/types.js";
 
-export class Transformation<T, E = T> {
+type TransformationFunctions<T, E = T> = {
+  readonly decode: (input: E) => T;
+  readonly encode: (input: T) => E;
+};
+
+export class Transformation<T, E = T> implements TransformationFunctions<T, E> {
   readonly #private: undefined;
 
   readonly decode: (input: E) => T;
   readonly encode: (input: T) => E;
 
-  constructor({
-    decode,
-    encode,
-  }: {
-    decode: (input: E) => T;
-    encode: (input: T) => E;
-  }) {
+  constructor({ decode, encode }: TransformationFunctions<T, E>) {
     this.decode = decode;
     this.encode = encode;
   }
 
-  static make<T, E>(config: {
-    decode: (input: E) => T;
-    encode: (input: T) => E;
-  }) {
+  static make<T, E>(config: TransformationFunctions<T, E>) {
     return new Transformation(config);
   }
 }
@@ -35,16 +31,32 @@ export type AnyTransformationMap =
   | DeepRecord<PropertyKey, Transformation<any>>;
 
 export namespace Infer {
-  export type Side<S extends SideName, TM extends AnyTransformationMap> =
+  type Side<S extends SideName, TM extends AnyTransformationMap, X = unknown> =
     TM extends Transformation<infer T, infer E>
       ? PickSide<S, T, E>
       : TM extends DeepRecord<PropertyKey, Transformation<any>>
-        ? { readonly [K in keyof TM]?: Side<S, TM[K]> }
+        ? Simplify<
+            Omit<X, keyof TM> &
+              (keyof X & keyof TM extends infer K extends keyof X
+                ? { [P in K]: Side<S, ValueOf<TM, K>, ValueOf<X, K>> }
+                : never) &
+              (Exclude<keyof TM, keyof X> extends infer K extends PropertyKey
+                ? { readonly [P in K]?: Side<S, ValueOf<TM, K>> }
+                : never)
+          >
         : never;
 
-  export type Type<TM extends AnyTransformationMap> = Side<"Type", TM>;
+  export type Type<
+    TM extends AnyTransformationMap,
+    E extends Encoded<TM> = // @ts-expect-error
+      unknown,
+  > = Side<"Type", TM, E>;
 
-  export type Encoded<TM extends AnyTransformationMap> = Side<"Encoded", TM>;
+  export type Encoded<
+    TM extends AnyTransformationMap,
+    T extends Type<TM> = // @ts-expect-error
+      unknown,
+  > = Side<"Encoded", TM, T>;
 }
 
 export type TransformationMap<T, E = T> =
@@ -168,12 +180,40 @@ export type Decode<
   E = Infer.Encoded<TM>,
 > = Apply<"Encoded", T, E, TM, X>;
 
+export class TransformationMapperFor<X> {
+  decode<
+    const TM extends AnyTransformationMap & TransformationMap<T, X>,
+    T = Infer.Type<
+      TM,
+      // @ts-expect-error
+      X
+    >,
+  >(transformationMap: TM) {
+    return new TransformationMapper<TM, T, X>(transformationMap);
+  }
+
+  encode<
+    const TM extends AnyTransformationMap & TransformationMap<X, E>,
+    E = Infer.Encoded<
+      TM,
+      // @ts-expect-error
+      X
+    >,
+  >(transformationMap: TM) {
+    return new TransformationMapper<TM, X, E>(transformationMap);
+  }
+}
+
 export class TransformationMapper<
   const TM extends AnyTransformationMap & TransformationMap<T, E>,
   T = Infer.Type<TM>,
   E = Infer.Encoded<TM>,
 > {
   constructor(readonly transformationMap: TM) {}
+
+  static for<X>() {
+    return new TransformationMapperFor<X>();
+  }
 
   static make<
     const TM extends AnyTransformationMap & TransformationMap<T, E>,
@@ -210,8 +250,3 @@ export class TransformationMapper<
     return Object.assign(target, source, overwrites);
   }
 }
-
-export const createTransformationMapper = <T, E = T>() => {
-  return <const TM extends TransformationMap<T, E>>(transformationMap: TM) =>
-    new TransformationMapper<TM, T, E>(transformationMap);
-};
