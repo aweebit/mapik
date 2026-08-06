@@ -48,21 +48,62 @@ export type UnsafeKyselifyCamelCase<Ts extends readonly Table[]> = {
   >]: UnsafeKyselifyTableCamelCase<Ts[K]>;
 };
 
-export type ToCamelCase<
+// https://github.com/drizzle-team/drizzle-orm/blob/main/drizzle-orm/src/casing.ts
+export type ToCamelCase<S extends string> = S extends `${infer A}${infer R}`
+  ? A extends `${bigint}`
+    ? `${A}${ToCamelCaseHelper1<R>}`
+    : Capitalize<A> extends Uncapitalize<A> // not a letter
+      ? ToCamelCase<R>
+      : A extends Capitalize<A>
+        ? `${Uncapitalize<A>}${ToCamelCaseHelper1A<R>}`
+        : `${A}${ToCamelCaseHelper1<R>}`
+  : S;
+
+type ToCamelCaseHelper1<S extends string> =
+  S extends `${"'" | "\u2019"}${infer R}`
+    ? ToCamelCaseHelper1<R>
+    : S extends `${infer A}${infer R}`
+      ? A extends `${bigint}`
+        ? `${A}${ToCamelCaseHelper1<R>}`
+        : Capitalize<A> extends Uncapitalize<A> // not a letter
+          ? ToCamelCaseHelper2<R, true>
+          : A extends Capitalize<A>
+            ? ToCamelCaseHelper2<S>
+            : `${A}${ToCamelCaseHelper1<R>}`
+      : S;
+
+type ToCamelCaseHelper1A<S extends string> =
+  S extends `${"'" | "\u2019"}${infer R}`
+    ? ToCamelCaseHelper1A<R>
+    : S extends `${infer A}${infer R}`
+      ? A extends `${bigint}`
+        ? `${A}${ToCamelCaseHelper2<R>}`
+        : Capitalize<A> extends Uncapitalize<A> // not a letter
+          ? ToCamelCaseHelper2<R, true>
+          : A extends Capitalize<A>
+            ? R extends `${infer B}${string}`
+              ? B extends Capitalize<B>
+                ? `${Uncapitalize<A>}${ToCamelCaseHelper1A<R>}`
+                : ToCamelCaseHelper2<S>
+              : never
+            : ToCamelCaseHelper2<S>
+      : S;
+
+type ToCamelCaseHelper2<
   S extends string,
   ShouldCapitalize extends boolean = false,
-> = S extends `'${infer R}`
-  ? ToCamelCase<R, ShouldCapitalize>
+> = S extends `${"'" | "\u2019"}${infer R}`
+  ? ToCamelCaseHelper2<R, ShouldCapitalize>
   : S extends `${infer A}${infer R}`
     ? A extends `${bigint}`
-      ? `${A}${ToCamelCase<R>}`
+      ? `${A}${ToCamelCaseHelper2<R>}`
       : Capitalize<A> extends Uncapitalize<A> // not a letter
-        ? ToCamelCase<R, true>
+        ? ToCamelCaseHelper2<R, true>
         : `${ShouldCapitalize extends true
             ? Capitalize<A>
             : ShouldCapitalize extends false
               ? A
-              : never}${ToCamelCase<R>}`
+              : never}${ToCamelCaseHelper2<R>}`
     : S;
 
 export class UnsafeCamelCasePlugin extends CamelCasePlugin {
