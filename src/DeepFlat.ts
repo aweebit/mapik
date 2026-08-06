@@ -1,5 +1,6 @@
 import type {
   DeepRecord,
+  IsAny,
   OptionalKeyOf,
   PropagateRequired,
   Simplify,
@@ -145,9 +146,13 @@ export class MakeFrom<const M extends Map> {
 }
 
 export class Mapper<
-  const M extends Map,
-  D extends Constraint.Deep<M> = Constraint.Deep<M>,
-  F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
+  const M extends Map = any,
+  D extends Constraint.Deep<M> = IsAny<M> extends true
+    ? any
+    : Constraint.Deep<M>,
+  F extends Constraint.Flat<M, D> = IsAny<M> extends true
+    ? any
+    : Constraint.Flat<M, D>,
 > {
   // TODO: Currently no inference of D and F from subclass types
 

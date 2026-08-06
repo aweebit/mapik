@@ -3,26 +3,29 @@ import * as Codec from "./Codec.js";
 import type * as DeepFlat from "./DeepFlat.js";
 import * as Drizzle from "./Drizzle.js";
 import { createDeepenAtDelimiter, type DeepenAtDelimiter } from "./Utils.js";
+import type { IsAny } from "./utils/index.js";
 
 export class EntityManager<
   D extends string,
-  A,
-  T extends Table,
-  const M extends Codec.Map<A, B>,
+  A = any,
+  T extends Table = Table,
+  const M extends Codec.Map<A, B> = any,
   B extends DeepFlat.Constraint.Deep<
     DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
     // @ts-expect-error
     InferSelectModel<// no @ts-expect-error here
     T>
-  > = Codec.Infer.Encoded<M, A> extends infer B extends
-    DeepFlat.Constraint.Deep<
-      DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
-      // @ts-expect-error
-      InferSelectModel<// no @ts-expect-error here
-      T>
-    >
-    ? B
-    : never,
+  > = IsAny<M> extends true
+    ? any
+    : Codec.Infer.Encoded<M, A> extends infer B extends
+          DeepFlat.Constraint.Deep<
+            DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
+            // @ts-expect-error
+            InferSelectModel<// no @ts-expect-error here
+            T>
+          >
+      ? B
+      : never,
 > {
   readonly effectMapper: Codec.Mapper<M, A, B>;
 
@@ -30,7 +33,7 @@ export class EntityManager<
     readonly delimiter: D,
     readonly drizzleMapper: Drizzle.TableMapper<
       T,
-      DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>
+      Table extends T ? any : DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>
     >,
     readonly map: M,
   ) {

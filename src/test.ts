@@ -9,7 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { Effect, Schema, SchemaParser, SchemaTransformation } from "effect";
 import * as Codec from "./Codec.js";
-import { createCreateEntityManager } from "./EntityManager.js";
+import { createCreateEntityManager, EntityManager } from "./EntityManager.js";
 
 const createEntityManager = createCreateEntityManager("_");
 
@@ -162,3 +162,5 @@ Codec.makeFor<{ a?: number }>().encode({
     // @ts-expect-error
     ({ a }),
 });
+
+const entityManager: EntityManager<"_"> = exampleEntityManager;

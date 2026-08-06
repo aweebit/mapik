@@ -1,5 +1,6 @@
 import type {
   DeepRecord,
+  IsAny,
   MutuallyAssignable,
   Simplify,
   ValueOf,
@@ -192,9 +193,9 @@ export class MapperFor<X> {
 }
 
 export class Mapper<
-  const M extends Map<T, E>,
-  T = Infer.Type<M>,
-  E = Infer.Encoded<M>,
+  const M extends Map<T, E> = any,
+  T = IsAny<M> extends true ? any : Infer.Type<M>,
+  E = IsAny<M> extends true ? any : Infer.Encoded<M>,
 > {
   constructor(readonly map: M) {}
 
