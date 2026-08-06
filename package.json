@@ -1,6 +1,10 @@
 {
   "name": "mapik",
+  "version": "0.1.0",
   "type": "module",
+  "scripts": {
+    "build": "rimraf dist && tsc"
+  },
   "peerDependencies": {
     "drizzle-orm": "^1.0.0-rc.1",
     "kysely": "^0.29.4"
@@ -13,6 +17,7 @@
   "devDependencies": {
     "drizzle-orm": "^1.0.0-rc.4",
     "effect": "^4.0.0-beta.102",
+    "rimraf": "^6.1.3",
     "typescript": "^7.0.2"
   },
   "allowScripts": {

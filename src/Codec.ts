@@ -21,6 +21,7 @@ export class CodecFor<X> {
   }
 }
 export class Codec<T, E = T> implements Config<T, E> {
+  // @ts-expect-error
   readonly #private: undefined;
 
   readonly decode: (input: E) => T;

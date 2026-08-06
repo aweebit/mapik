@@ -174,7 +174,7 @@ Codec.makeFor<{ a?: number }>().encode({
     ({ a }),
 });
 
-const entityManager: EntityManager<"_"> = exampleEntityManager;
+exampleEntityManager satisfies EntityManager<"_">;
 
 type Database = UnsafeKyselifyCamelCase<
   [typeof experimentTable, typeof experimentDataTable]
