@@ -2,6 +2,20 @@
   "name": "mapik",
   "version": "0.1.0",
   "type": "module",
+  "sideEffects": false,
+  "repository": "github:aweebit/mapik",
+  "exports": {
+    ".": "./dist/index.js",
+    "./*": "./dist/*.js",
+    "./Drizzle/*": "./dist/Drizzle/*.js"
+  },
+  "files": [
+    "src/**/*.ts",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map"
+  ],
   "scripts": {
     "build": "rimraf dist && tsc"
   },
