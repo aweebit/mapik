@@ -1,5 +1,5 @@
 {
-  "name": "mapio",
+  "name": "mapik",
   "type": "module",
   "peerDependencies": {
     "drizzle-orm": "^1.0.0-rc.1"
