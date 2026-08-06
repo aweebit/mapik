@@ -11,10 +11,12 @@ export class EntityManager<
   const M extends Codec.Map<A, B>,
   B extends DeepFlat.Constraint.Deep<
     DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
+    // @ts-expect-error
     InferSelectModel<T>
   > = Codec.Infer.Encoded<M, A> extends infer B extends
     DeepFlat.Constraint.Deep<
       DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
+      // @ts-expect-error
       InferSelectModel<T>
     >
     ? B
@@ -42,12 +44,7 @@ export class EntityManager<
     return this.drizzleMapper.flatten(this.effectMapper.encode(input) as any);
   }
 
-  decode<
-    X extends DeepFlat.Constraint.Flat<
-      DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
-      InferSelectModel<T>
-    >,
-  >(
+  decode<X extends Partial<InferSelectModel<T>>>(
     input: X,
   ): Codec.Decode<
     M,
@@ -74,10 +71,12 @@ export const createCreateEntityManager = <D extends string>(delimiter: D) => {
       const M extends Codec.Map<A, B>,
       B extends DeepFlat.Constraint.Deep<
         DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
+        // @ts-expect-error
         InferSelectModel<T>
       > = Codec.Infer.Encoded<M, A> extends infer B extends
         DeepFlat.Constraint.Deep<
           DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
+          // @ts-expect-error
           InferSelectModel<T>
         >
         ? B

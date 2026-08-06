@@ -21,7 +21,20 @@ type FlatKeyOfHelper<M extends Map | PropertyKey> = M extends PropertyKey
     : never;
 
 export declare namespace Constraint {
-  export type Flat<M extends Map> = { readonly [K in FlatKeyOf<M>]?: unknown };
+  export type Flat<M extends Map, D extends Deep<M> = Deep<M>> =
+    // The shortcut relies on
+    // https://github.com/microsoft/TypeScript/issues/63725
+    Deep<M> extends D
+      ? { readonly [K in FlatKeyOf<M>]?: unknown }
+      : Simplify<UnionToIntersection<FlatHelper<M, D>>>;
+
+  type FlatHelper<M extends Map | PropertyKey, D> = M extends PropertyKey
+    ? { readonly [K in M]?: D }
+    : M extends Map
+      ? {
+          [K in keyof M]: FlatHelper<M[K], K extends keyof D ? D[K] : unknown>;
+        }[keyof M]
+      : never;
 
   /**
    * Beware that because of
@@ -29,10 +42,10 @@ export declare namespace Constraint {
    * have to add a `@ts-expect-error` comment when passing a generic argument to
    * `F`.
    */
-  export type Deep<M extends Map, F extends Flat<M> = Flat<M>> = DeepHelper<
-    M,
-    F
-  >;
+  export type Deep<
+    M extends Map,
+    F extends Flat<M> = { readonly [K in FlatKeyOf<M>]?: unknown },
+  > = DeepHelper<M, F>;
 
   type DeepHelper<
     M extends Map | PropertyKey,

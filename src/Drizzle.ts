@@ -79,7 +79,7 @@ export class TableMapper<
   }
 
   deepen<F extends Partial<InferSelectModel<T>>>(flat: F): Deepen<M, F> {
-    return this.mapper.deepen(flat);
+    return this.mapper.deepen(flat as any) as any;
   }
 }
 

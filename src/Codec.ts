@@ -159,19 +159,19 @@ type Apply<
         : never
       : never;
 
-export type Encode<
-  M extends Map<T, E>,
-  X extends Constraint.Type<M, T, E>,
-  T = Infer.Type<M>,
-  E = Infer.Encoded<M>,
-> = Apply<"Type", T, E, M, X>;
-
 export type Decode<
   M extends Map<T, E>,
   X extends Constraint.Encoded<M, T, E>,
   T = Infer.Type<M>,
   E = Infer.Encoded<M>,
 > = Apply<"Encoded", T, E, M, X>;
+
+export type Encode<
+  M extends Map<T, E>,
+  X extends Constraint.Type<M, T, E>,
+  T = Infer.Type<M>,
+  E = Infer.Encoded<M>,
+> = Apply<"Type", T, E, M, X>;
 
 export class MapperFor<X> {
   decode<const M extends Map<T, X>, T = Infer.Type<M, X>>(map: M) {
