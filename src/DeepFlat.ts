@@ -129,6 +129,18 @@ type DeepenHelper<
   >
 >;
 
+export class MakeFrom<const M extends Map> {
+  constructor(readonly map: M) {}
+
+  flatten<D extends Constraint.Deep<M>>() {
+    return new Mapper<M, D>(this.map);
+  }
+
+  deepen<F extends Constraint.Flat<M>>() {
+    return new Mapper<M, Constraint.Deep<M, F>, F>(this.map);
+  }
+}
+
 export class Mapper<
   const M extends Map,
   D extends Constraint.Deep<M> = Constraint.Deep<M>,
@@ -139,6 +151,10 @@ export class Mapper<
   constructor(readonly map: M) {
     this.flatten = this.flatten.bind(this);
     this.deepen = this.deepen.bind(this);
+  }
+
+  static makeFrom<const M extends Map>(map: M) {
+    return new MakeFrom(map);
   }
 
   static make<
