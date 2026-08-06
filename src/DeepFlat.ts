@@ -22,11 +22,11 @@ type FlatKeyOfHelper<M extends Map | PropertyKey> = M extends PropertyKey
 
 export declare namespace Constraint {
   export type Flat<M extends Map, D extends Deep<M> = Deep<M>> =
-    // The shortcut relies on
-    // https://github.com/microsoft/TypeScript/issues/63725
-    Deep<M> extends D
-      ? { readonly [K in FlatKeyOf<M>]?: unknown }
-      : Simplify<UnionToIntersection<FlatHelper<M, D>>>;
+    Simplify<UnionToIntersection<FlatHelper<M, D>>> extends infer R extends {
+      readonly [K in FlatKeyOf<M>]?: unknown;
+    }
+      ? R
+      : never;
 
   type FlatHelper<M extends Map | PropertyKey, D> = M extends PropertyKey
     ? { readonly [K in M]?: D }
@@ -44,7 +44,8 @@ export declare namespace Constraint {
    */
   export type Deep<
     M extends Map,
-    F extends Flat<M> = { readonly [K in FlatKeyOf<M>]?: unknown },
+    F extends Flat<M> = // @ts-expect-error
+      { readonly [K in FlatKeyOf<M>]?: unknown },
   > = DeepHelper<M, F>;
 
   type DeepHelper<
@@ -115,9 +116,7 @@ type DeepenHelper<
   F extends Constraint.Flat<M>,
   FK extends keyof F = keyof F & M[keyof M],
 > = Simplify<
-  {
-    -readonly [K in FK as MapFlatKeyBack<M, K>]: F[K];
-  } & PropagateRequired<
+  { -readonly [K in FK as MapFlatKeyBack<M, K>]: F[K] } & PropagateRequired<
     RemoveRequiredNever<{
       [K in keyof M]: M[K] extends infer MV
         ? MV extends Map
@@ -130,17 +129,27 @@ type DeepenHelper<
   >
 >;
 
-export class Mapper<const M extends Map> {
+export class Mapper<
+  const M extends Map,
+  D extends Constraint.Deep<M> = Constraint.Deep<M>,
+  F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
+> {
+  // TODO: Currently no inference of D and F from subclass types
+
   constructor(readonly map: M) {
     this.flatten = this.flatten.bind(this);
     this.deepen = this.deepen.bind(this);
   }
 
-  static make<const M extends Map>(map: M) {
-    return new Mapper(map);
+  static make<
+    const M extends Map,
+    D extends Constraint.Deep<M> = Constraint.Deep<M>,
+    F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
+  >(map: M) {
+    return new Mapper<M, D, F>(map);
   }
 
-  flatten<D extends Constraint.Deep<M>>(deep: D): Flatten<M, D> {
+  flatten<X extends Constraint.Deep<M, F>>(deep: X): Flatten<M, X> {
     const flat: Record<PropertyKey, unknown> = {};
     const process = (m: Map, d: Record<PropertyKey, unknown>) => {
       Object.entries(m).forEach(([key, value]) => {
@@ -152,10 +161,16 @@ export class Mapper<const M extends Map> {
       });
     };
     process(this.map, deep);
-    return flat as Flatten<M, D>;
+    return flat as Flatten<M, X>;
   }
 
-  deepen<F extends Constraint.Flat<M>>(flat: F): Deepen<M, F> {
+  deepen<X extends Partial<F>>(
+    flat: X,
+  ): Deepen<
+    M,
+    // @ts-expect-error
+    X
+  > {
     const process = (m: Map): Record<PropertyKey, unknown> => {
       return Object.entries(m).reduce<Record<PropertyKey, unknown>>(
         (d, [key, value]) => {
@@ -168,6 +183,10 @@ export class Mapper<const M extends Map> {
         {},
       );
     };
-    return process(this.map) as Deepen<M, F>;
+    return process(this.map) as Deepen<
+      M,
+      // @ts-expect-error
+      X
+    >;
   }
 }

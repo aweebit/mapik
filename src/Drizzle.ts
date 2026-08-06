@@ -4,13 +4,7 @@ import {
   type Table,
   type TableConfig,
 } from "drizzle-orm";
-import {
-  Mapper,
-  type Constraint,
-  type Deepen,
-  type Flatten,
-  type Map,
-} from "./DeepFlat.js";
+import { Mapper, type Constraint, type Map } from "./DeepFlat.js";
 
 type IdentityMap<K extends PropertyKey> = { [P in K]: P } & {};
 
@@ -34,52 +28,45 @@ export const mapToSelf = <T extends Table>(table: T): MapToSelf<T> => {
 export class TableMapper<
   T extends Table,
   const M extends Map<keyof InferSelectModel<T>>,
+> extends Mapper<
+  M,
+  Constraint.Deep<
+    M,
+    // @ts-expect-error
+    InferSelectModel<T>
+  >,
+  // @ts-expect-error
+  InferSelectModel<T>
 > {
-  protected readonly mapper: Mapper<M>;
-
   protected constructor(
     readonly table: T,
-    readonly map: M,
+    map: M,
   ) {
-    this.mapper = new Mapper(map);
-
-    this.flatten = this.flatten.bind(this);
-    this.deepen = this.deepen.bind(this);
+    super(map);
   }
 
-  static make<T extends Table>(table: T): TableMapper<T, MapToSelf<T>>;
-  static make<T extends Table, const M extends Map<keyof InferSelectModel<T>>>(
+  static override make<T extends Table>(table: T): TableMapper<T, MapToSelf<T>>;
+  static override make<
+    T extends Table,
+    const M extends Map<keyof InferSelectModel<T>>,
+  >(
     table: T,
     derivePropertyMap: (identityMap: MapToSelf<T>) => M,
   ): TableMapper<T, M>;
-  static make<T extends Table, const M extends Map<keyof InferSelectModel<T>>>(
-    table: T,
-    propertyMap: M,
-  ): TableMapper<T, M>;
-  static make<T extends Table, const M extends Map<keyof InferSelectModel<T>>>(
-    table: T,
-    propertyMap?: M | ((identityMap: MapToSelf<T>) => M),
-  ) {
+  static override make<
+    T extends Table,
+    const M extends Map<keyof InferSelectModel<T>>,
+  >(table: T, propertyMap: M): TableMapper<T, M>;
+  static override make<
+    T extends Table,
+    const M extends Map<keyof InferSelectModel<T>>,
+  >(table: T, propertyMap?: M | ((identityMap: MapToSelf<T>) => M)) {
     return new TableMapper(
       table,
       typeof propertyMap === "function"
         ? propertyMap(mapToSelf(table))
         : (propertyMap ?? mapToSelf(table)),
     );
-  }
-
-  flatten<
-    D extends Constraint.Deep<
-      M,
-      // @ts-expect-error
-      InferSelectModel<T>
-    >,
-  >(deep: D): Flatten<M, D> {
-    return this.mapper.flatten(deep);
-  }
-
-  deepen<F extends Partial<InferSelectModel<T>>>(flat: F): Deepen<M, F> {
-    return this.mapper.deepen(flat as any) as any;
   }
 }
 
