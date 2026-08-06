@@ -8,7 +8,18 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { Effect, Schema, SchemaParser, SchemaTransformation } from "effect";
+import {
+  DummyDriver,
+  Kysely,
+  PostgresAdapter,
+  PostgresIntrospector,
+  PostgresQueryCompiler,
+} from "kysely";
 import * as Codec from "./Codec.js";
+import {
+  UnsafeCamelCasePlugin,
+  type UnsafeKyselifyCamelCase,
+} from "./Drizzle/Kysely.js";
 import { createCreateEntityManager, EntityManager } from "./EntityManager.js";
 
 const createEntityManager = createCreateEntityManager("_");
@@ -164,3 +175,25 @@ Codec.makeFor<{ a?: number }>().encode({
 });
 
 const entityManager: EntityManager<"_"> = exampleEntityManager;
+
+type Database = UnsafeKyselifyCamelCase<
+  [typeof experimentTable, typeof experimentDataTable]
+>;
+
+const db = new Kysely<Database>({
+  dialect: {
+    createAdapter: () => new PostgresAdapter(),
+    createDriver: () => new DummyDriver(),
+    createIntrospector: (db) => new PostgresIntrospector(db),
+    createQueryCompiler: () => new PostgresQueryCompiler(),
+  },
+  plugins: [new UnsafeCamelCasePlugin()],
+});
+
+const sql = db
+  .selectFrom("experimentData")
+  .select(["experimentId", "accelerationTopX"])
+  .compile().sql;
+
+// @ts-ignore
+console.log(sql);

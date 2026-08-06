@@ -5,7 +5,7 @@ import {
   type Table,
   type TableConfig,
 } from "drizzle-orm";
-import { Mapper, type Constraint, type Map } from "./DeepFlat.js";
+import { Mapper, type Constraint, type Map } from "../DeepFlat.js";
 
 type IdentityMap<K extends PropertyKey> = { [P in K]: P } & {};
 
