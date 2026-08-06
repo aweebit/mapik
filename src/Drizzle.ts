@@ -34,10 +34,12 @@ export class TableMapper<
   Constraint.Deep<
     M,
     // @ts-expect-error
-    InferSelectModel<T>
+    InferSelectModel<// no @ts-expect-error here
+    T>
   >,
   // @ts-expect-error
-  InferSelectModel<T>
+  InferSelectModel<// no @ts-expect-error here
+  T>
 > {
   protected constructor(
     readonly table: T,

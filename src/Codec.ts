@@ -112,7 +112,11 @@ export declare namespace Constraint {
                   ValueOf<T, K>,
                   ValueOf<E, K>,
                   // @ts-expect-error
-                  ValueOf<M, K>
+                  ValueOf<
+                    // no @ts-expect-error here
+                    M,
+                    K
+                  >
                 >
               : ValueOf<PickSide<S, T, E>, K>;
           }
@@ -150,7 +154,11 @@ type Apply<
                     ValueOf<T, K>,
                     ValueOf<E, K>,
                     // @ts-expect-error
-                    ValueOf<M, K>,
+                    ValueOf<
+                      // no @ts-expect-error here
+                      M,
+                      K
+                    >,
                     ValueOf<X, K>
                   >
                 : never;

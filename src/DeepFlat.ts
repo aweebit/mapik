@@ -45,7 +45,10 @@ export declare namespace Constraint {
   export type Deep<
     M extends Map,
     F extends Flat<M> = // @ts-expect-error
-      { readonly [K in FlatKeyOf<M>]?: unknown },
+      {
+        // no @ts-expect-error here
+        readonly [K in FlatKeyOf<M>]?: unknown;
+      },
   > = DeepHelper<M, F>;
 
   type DeepHelper<
