@@ -1,5 +1,6 @@
 import {
   getColumns,
+  getTableUniqueName,
   type InferSelectModel,
   type Table,
   type TableConfig,
@@ -84,12 +85,11 @@ export function createMapper<
 
   return <T extends TMs[number]["table"]>(table: T): GetTableMapper<TMs, T> => {
     const tableMapper = tableMapperMap.get(table);
-    if (tableMapper === undefined)
+    if (tableMapper === undefined) {
       throw new Error(
-        `No table mapper was registered for table ${
-          table._.schema ? `${table._.schema}.` : ""
-        }${table._.name}`,
+        `No table mapper was registered for table ${getTableUniqueName(table)}`,
       );
+    }
     return tableMapper as GetTableMapper<TMs, T>;
   };
 }
