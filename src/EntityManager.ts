@@ -27,6 +27,7 @@ export class EntityManager<
   readonly effectMapper: Codec.Mapper<M, A, B>;
 
   constructor(
+    readonly delimiter: D,
     readonly drizzleMapper: Drizzle.TableMapper<
       T,
       DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>
@@ -98,6 +99,11 @@ export const createCreateEntityManager = <D extends string>(delimiter: D) => {
     >(
       table: T,
       map: M,
-    ) => new EntityManager<D, A, T, M, B>(makeDrizzleMapper(table), map);
+    ) =>
+      new EntityManager<D, A, T, M, B>(
+        delimiter,
+        makeDrizzleMapper(table),
+        map,
+      );
   };
 };
