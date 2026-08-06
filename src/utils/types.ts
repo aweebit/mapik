@@ -10,7 +10,7 @@ export type DeepSimplify<T> = { [K in keyof T]: DeepSimplify<T[K]> } & {};
 
 export type MutuallyAssignable<A, B> = [A, B] extends [B, A] ? true : false;
 
-// Doesn't include undefined for optional keys
+// Similar to T[K], but doesn't include undefined for optional keys
 export type ValueOf<T, K extends keyof T = keyof T> = {
   [P in K]-?: T[P];
 }[K];

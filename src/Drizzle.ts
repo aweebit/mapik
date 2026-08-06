@@ -68,15 +68,17 @@ export class TableMapper<
     );
   }
 
-  flatten<D extends Constraint.Deep<M, InferSelectModel<T>>>(
-    deep: D,
-  ): Flatten<M, D> {
+  flatten<
+    D extends Constraint.Deep<
+      M,
+      // @ts-expect-error
+      InferSelectModel<T>
+    >,
+  >(deep: D): Flatten<M, D> {
     return this.mapper.flatten(deep);
   }
 
-  deepen<F extends Constraint.Flat<M, InferSelectModel<T>>>(
-    flat: F,
-  ): Deepen<M, F> {
+  deepen<F extends Partial<InferSelectModel<T>>>(flat: F): Deepen<M, F> {
     return this.mapper.deepen(flat);
   }
 }

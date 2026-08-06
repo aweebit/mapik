@@ -7,41 +7,41 @@ import type {
   ValueOf,
 } from "./utils/index.js";
 
-// TODO: Allow symbols?
-export type Map<FK extends PropertyKey = string> = DeepRecord<
-  string,
-  FK & string
+export type Map<FlatKey extends PropertyKey = PropertyKey> = DeepRecord<
+  PropertyKey,
+  FlatKey
 >;
 
 export type FlatKeyOf<M extends Map> = FlatKeyOfHelper<M>;
 
-type FlatKeyOfHelper<M extends Map | string> = M extends string
+type FlatKeyOfHelper<M extends Map | PropertyKey> = M extends PropertyKey
   ? M
   : M extends Map
-    ? { [K in keyof M & string]: FlatKeyOfHelper<M[K]> }[keyof M & string]
+    ? { [K in keyof M]: FlatKeyOfHelper<M[K]> }[keyof M]
     : never;
 
 export declare namespace Constraint {
+  export type Flat<M extends Map> = { readonly [K in FlatKeyOf<M>]?: unknown };
+
+  /**
+   * Beware that because of
+   * https://github.com/microsoft/TypeScript/issues/63725, you will most likely
+   * have to add a `@ts-expect-error` comment when passing a generic argument to
+   * `F`.
+   */
   export type Deep<M extends Map, F extends Flat<M> = Flat<M>> = DeepHelper<
     M,
     F
   >;
 
   type DeepHelper<
-    M extends Map | string,
-    F extends Record<string, unknown>,
-  > = M extends string
+    M extends Map | PropertyKey,
+    F extends Record<PropertyKey, unknown>,
+  > = M extends PropertyKey
     ? ValueOf<F, M>
     : M extends Map
-      ? Simplify<{
-          readonly [K in keyof M & string]?: DeepHelper<M[K], F>;
-        }>
+      ? Simplify<{ readonly [K in keyof M]?: DeepHelper<M[K], F> }>
       : never;
-
-  export type Flat<
-    M extends Map,
-    F extends Flat<M> = { readonly [K in FlatKeyOf<M>]?: unknown },
-  > = { readonly [K in FlatKeyOf<M>]?: ValueOf<F, K> };
 }
 
 export type Flatten<
@@ -60,13 +60,13 @@ type FlattenHelper<
   D extends Constraint.Deep<M>,
   O extends boolean = false, // inherited optionality
 > = {
-  [K in keyof M & keyof D & string]: [
+  [K in keyof M & keyof D]: [
     M[K],
     ValueOf<D, K>, // somehow undefined doesn't mess things up
     // even without ValueOf ¯\_(ツ)_/¯ But we choose to not rely on that.
     K extends OptionalKeyOf<D, K> ? true : false,
   ] extends [infer MV, infer DV, infer KO extends boolean]
-    ? MV extends string
+    ? MV extends PropertyKey
       ? true extends O | KO
         ? { [P in MV]?: DV }
         : { [P in MV]: DV }
@@ -76,7 +76,7 @@ type FlattenHelper<
           : never
         : never
     : never;
-}[keyof M & keyof D & string];
+}[keyof M & keyof D];
 
 export type Deepen<
   M extends Map,
@@ -93,24 +93,20 @@ type KeyExceptRequiredNever<T> = {
 
 type RemoveRequiredNever<T> = Pick<T, KeyExceptRequiredNever<T>>;
 
-type MapFlatKeyBack<M extends Map, FK> = {
-  [K in keyof M & string]: M[K] extends infer MV
-    ? MV extends FK
-      ? K
-      : never
-    : never;
-}[keyof M & string];
+type MapFlatKeyBack<M extends Map, FK extends PropertyKey> = {
+  [K in keyof M]: M[K] extends infer MV ? (MV extends FK ? K : never) : never;
+}[keyof M];
 
 type DeepenHelper<
   M extends Map,
   F extends Constraint.Flat<M>,
-  FK extends keyof F = keyof F & M[string],
+  FK extends keyof F = keyof F & M[keyof M],
 > = Simplify<
   {
     -readonly [K in FK as MapFlatKeyBack<M, K>]: F[K];
   } & PropagateRequired<
     RemoveRequiredNever<{
-      [K in keyof M & string]: M[K] extends infer MV
+      [K in keyof M]: M[K] extends infer MV
         ? MV extends Map
           ? F extends Constraint.Flat<MV>
             ? DeepenHelper<MV, F>
@@ -132,12 +128,13 @@ export class Mapper<const M extends Map> {
   }
 
   flatten<D extends Constraint.Deep<M>>(deep: D): Flatten<M, D> {
-    const flat: Record<string, unknown> = {};
-    const process = (m: Map, d: Record<string, unknown>) => {
+    const flat: Record<PropertyKey, unknown> = {};
+    const process = (m: Map, d: Record<PropertyKey, unknown>) => {
       Object.entries(m).forEach(([key, value]) => {
         if (key in d) {
-          if (typeof value === "string") flat[value] = d[key];
-          else process(value, d[key] as Record<string, unknown>);
+          if (typeof value === "object")
+            process(value, d[key] as Record<PropertyKey, unknown>);
+          else flat[value] = d[key];
         }
       });
     };
@@ -146,10 +143,10 @@ export class Mapper<const M extends Map> {
   }
 
   deepen<F extends Constraint.Flat<M>>(flat: F): Deepen<M, F> {
-    const process = (m: Map): Record<string, unknown> => {
-      return Object.entries(m).reduce<Record<string, unknown>>(
+    const process = (m: Map): Record<PropertyKey, unknown> => {
+      return Object.entries(m).reduce<Record<PropertyKey, unknown>>(
         (d, [key, value]) => {
-          if (typeof value !== "string") {
+          if (typeof value === "object") {
             const deeper = process(value);
             if (Object.keys(deeper).length) d[key] = deeper;
           } else if (value in flat) d[key] = flat[value as keyof typeof flat];
