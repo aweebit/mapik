@@ -1,6 +1,7 @@
 import {
   bigint,
   doublePrecision,
+  integer,
   primaryKey,
   snakeCase,
   text,
@@ -107,6 +108,20 @@ const experimentDataEntityManager = createEntityManager<ExperimentData>()(
   { acceleration: { top: Vector3dCodec, bottom: Vector3dCodec } },
 );
 
+class Example extends Schema.Class<Example>("Example")({
+  nested: Schema.Struct({
+    a: Schema.Number,
+    b: Schema.Number,
+  }),
+}) {}
+
+const exampleTable = snakeCase.table("example", {
+  nested_a: integer().notNull(),
+  nested_b: integer().notNull(),
+});
+
+const exampleEntityManager = createEntityManager<Example>()(exampleTable);
+
 const experiment = new Experiment({ name: "#1", timeStarted: new Date() });
 
 const experimentId = 1n;
@@ -118,15 +133,32 @@ const experimentData = new ExperimentData({
   acceleration: { top: [0, 0, 0], bottom: [0, 0, 0] },
 });
 
+const example = new Example({ nested: { a: 0, b: 0 } });
+
 const flatExperiment = experimentEntityManager.encode(experiment);
 const flatExperimentData = experimentDataEntityManager.encode(experimentData);
+const flatExample = exampleEntityManager.encode(example);
 
 const results = [
+  experiment,
   flatExperiment,
-  flatExperimentData,
   experimentEntityManager.decode(flatExperiment),
+  experimentData,
+  flatExperimentData,
   experimentDataEntityManager.decode(flatExperimentData),
+  example,
+  flatExample,
+  exampleEntityManager.decode(flatExample),
 ];
 
-// @ts-ignore
-console.log(results);
+results.forEach((result) => {
+  // @ts-ignore
+  console.log(result);
+});
+
+Codec.makeFor<{ a?: number }>().encode({
+  encode: ({ a }) => a,
+  decode: (a) =>
+    // @ts-expect-error
+    ({ a }),
+});

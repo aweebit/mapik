@@ -81,7 +81,15 @@ export const createCreateEntityManager = <D extends string>(delimiter: D) => {
   return function createEntityManager<A>() {
     return <
       T extends Table,
-      const M extends Codec.Map<A, B>,
+      const M extends Codec.Map<A, B> = // @ts-expect-error
+        [
+          // no @ts-expect-error here
+          A,
+        ] extends [object]
+          ? (() => never) extends A
+            ? never
+            : {}
+          : never,
       B extends DeepFlat.Constraint.Deep<
         DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
         // @ts-expect-error
@@ -98,12 +106,12 @@ export const createCreateEntityManager = <D extends string>(delimiter: D) => {
         : never,
     >(
       table: T,
-      map: M,
+      ...[map]: {} extends M ? [map?: M] : [map: M]
     ) =>
       new EntityManager<D, A, T, M, B>(
         delimiter,
         makeDrizzleMapper(table),
-        map,
+        (map ?? {}) as M,
       );
   };
 };
