@@ -1,9 +1,9 @@
 import type { InferSelectModel, Table } from "drizzle-orm";
-import * as Codec from "./Codec.js";
-import type * as DeepFlat from "./DeepFlat.js";
-import * as Drizzle from "./Drizzle/index.js";
-import { createDeepenAtDelimiter, type DeepenAtDelimiter } from "./Utils.js";
-import type { IsAny } from "./utils/index.js";
+import * as Codec from "../Codec.js";
+import type * as DeepFlat from "../DeepFlat.js";
+import { createDeepenAtDelimiter, type DeepenAtDelimiter } from "../Utils.js";
+import type { IsAny } from "../utils/index.js";
+import * as Drizzle from "./Drizzle.js";
 
 export class EntityManager<
   D extends string,

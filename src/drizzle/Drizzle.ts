@@ -6,14 +6,9 @@ import {
   type TableConfig,
 } from "drizzle-orm";
 import { Mapper, type Constraint, type Map } from "../DeepFlat.js";
+import { identityMap, type IdentityMap } from "../utils/index.js";
 
-type IdentityMap<K extends PropertyKey> = { [P in K]: P } & {};
-
-const identityMap = <const Ks extends readonly PropertyKey[]>(keys: Ks) => {
-  return Object.fromEntries(keys.map((key) => [key, key])) as IdentityMap<
-    (typeof keys)[number]
-  >;
-};
+export * from "./EntityManager.js";
 
 export type MapToSelf<T extends Table> = IdentityMap<
   keyof (T extends Table<TableConfig<infer TColumns>> ? TColumns : never) &
