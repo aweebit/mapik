@@ -1,6 +1,5 @@
 import type { InferInsertModel, InferSelectModel, Table } from "drizzle-orm";
-import { toCamelCase, toSnakeCase } from "drizzle-orm/casing";
-import { CamelCasePlugin, type ColumnType } from "kysely";
+import { type ColumnType } from "kysely";
 
 export type UnsafeKyselifyTable<T extends Table> = T extends unknown
   ? {
@@ -24,98 +23,8 @@ export type UnsafeKyselifyTableName<T extends Table> =
       : T["_"]["name"]
     : never;
 
-export type UnsafeKyselify<Ts extends readonly Table[]> = {
+export type UnsafeKyselifyTables<Ts extends readonly Table[]> = {
   [K in keyof Ts & `${number}` as UnsafeKyselifyTableName<
     Ts[K]
   >]: UnsafeKyselifyTable<Ts[K]>;
 };
-
-export type UnsafeKyselifyTableCamelCase<T extends Table> =
-  UnsafeKyselifyTable<T> extends infer U
-    ? { [K in keyof U & string as ToCamelCase<K>]: U[K] }
-    : never;
-
-export type UnsafeKyselifyTableNameCamelCase<T extends Table> =
-  T["_"]["schema"] extends infer SchemaName
-    ? SchemaName extends string
-      ? `${ToCamelCase<SchemaName>}.${ToCamelCase<T["_"]["name"]>}`
-      : ToCamelCase<T["_"]["name"]>
-    : never;
-
-export type UnsafeKyselifyCamelCase<Ts extends readonly Table[]> = {
-  [K in keyof Ts & `${number}` as UnsafeKyselifyTableNameCamelCase<
-    Ts[K]
-  >]: UnsafeKyselifyTableCamelCase<Ts[K]>;
-};
-
-// https://github.com/drizzle-team/drizzle-orm/blob/main/drizzle-orm/src/casing.ts
-export type ToCamelCase<S extends string> = S extends `${infer A}${infer R}`
-  ? A extends `${bigint}`
-    ? `${A}${ToCamelCaseHelper1<R>}`
-    : Capitalize<A> extends Uncapitalize<A> // not a letter
-      ? ToCamelCase<R>
-      : A extends Capitalize<A>
-        ? `${Uncapitalize<A>}${ToCamelCaseHelper1A<R>}`
-        : `${A}${ToCamelCaseHelper1<R>}`
-  : S;
-
-type ToCamelCaseHelper1<S extends string> =
-  S extends `${"'" | "\u2019"}${infer R}`
-    ? ToCamelCaseHelper1<R>
-    : S extends `${infer A}${infer R}`
-      ? A extends `${bigint}`
-        ? `${A}${ToCamelCaseHelper1<R>}`
-        : Capitalize<A> extends Uncapitalize<A> // not a letter
-          ? ToCamelCaseHelper2<R, true>
-          : A extends Capitalize<A>
-            ? ToCamelCaseHelper2<S>
-            : `${A}${ToCamelCaseHelper1<R>}`
-      : S;
-
-type ToCamelCaseHelper1A<S extends string> =
-  S extends `${"'" | "\u2019"}${infer R}`
-    ? ToCamelCaseHelper1A<R>
-    : S extends `${infer A}${infer R}`
-      ? A extends `${bigint}`
-        ? `${A}${ToCamelCaseHelper2<R>}`
-        : Capitalize<A> extends Uncapitalize<A> // not a letter
-          ? ToCamelCaseHelper2<R, true>
-          : A extends Capitalize<A>
-            ? R extends `${infer B}${string}`
-              ? B extends Capitalize<B>
-                ? `${Uncapitalize<A>}${ToCamelCaseHelper1A<R>}`
-                : ToCamelCaseHelper2<S>
-              : never
-            : ToCamelCaseHelper2<S>
-      : S;
-
-type ToCamelCaseHelper2<
-  S extends string,
-  ShouldCapitalize extends boolean = false,
-> = S extends `${"'" | "\u2019"}${infer R}`
-  ? ToCamelCaseHelper2<R, ShouldCapitalize>
-  : S extends `${infer A}${infer R}`
-    ? A extends `${bigint}`
-      ? `${A}${ToCamelCaseHelper2<R>}`
-      : Capitalize<A> extends Uncapitalize<A> // not a letter
-        ? ToCamelCaseHelper2<R, true>
-        : `${ShouldCapitalize extends true
-            ? Capitalize<A>
-            : ShouldCapitalize extends false
-              ? A
-              : never}${ToCamelCaseHelper2<R>}`
-    : S;
-
-export class UnsafeCamelCasePlugin extends CamelCasePlugin {
-  constructor() {
-    super({ maintainNestedObjectKeys: true });
-  }
-
-  protected override snakeCase(str: string): string {
-    return toSnakeCase(str);
-  }
-
-  protected override camelCase(str: string): string {
-    return toCamelCase(str);
-  }
-}
