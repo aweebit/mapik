@@ -10,13 +10,13 @@ export class EntityManager<
   T extends Table | View = Table | View,
   const M extends Codec.Map<A, B> = any,
   B extends DeepFlat.Constraint.Deep<
-    DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
+    DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
     Drizzle.InferSelect<T>
   > = IsAny<M> extends true
     ? any
     : Codec.Infer.Encoded<M, A> extends infer B extends
           DeepFlat.Constraint.Deep<
-            DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
+            DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
             Drizzle.InferSelect<T>
           >
       ? B
@@ -104,11 +104,11 @@ export const createCreateEntityManager = <D extends string>(delimiter: D) => {
             : {}
           : never,
       B extends DeepFlat.Constraint.Deep<
-        DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
+        DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
         Drizzle.InferSelect<T>
       > = Codec.Infer.Encoded<M, A> extends infer B extends
         DeepFlat.Constraint.Deep<
-          DeepenAtDelimiter<"_", Drizzle.MapToSelf<T>>,
+          DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
           Drizzle.InferSelect<T>
         >
         ? B
