@@ -1,11 +1,12 @@
 import type { IdentityMap } from "./Utils.js";
-import type {
-  DeepReadonlyRecord,
-  OptionalKeyOf,
-  PropagateRequired,
-  Simplify,
-  UnionToIntersection,
-  ValueOf,
+import {
+  getOwnKeys,
+  type DeepReadonlyRecord,
+  type OptionalKeyOf,
+  type PropagateRequired,
+  type Simplify,
+  type UnionToIntersection,
+  type ValueOf,
 } from "./utils/index.js";
 
 export type Map<FlatKey extends PropertyKey = PropertyKey> = DeepReadonlyRecord<
@@ -184,31 +185,32 @@ export class MapperBase<
 
   flatten<X extends Constraint.Deep<M, F>>(deep: X): Flatten<M, X> {
     const flat: Record<PropertyKey, unknown> = {};
-    const process = (m: Map, d: Record<PropertyKey, unknown>) => {
-      Object.entries(m).forEach(([key, value]) => {
-        if (key in d) {
-          if (typeof value === "object")
-            process(value, d[key] as Record<PropertyKey, unknown>);
-          else flat[value] = d[key];
-        }
-      });
+    const process = (map: Map, deep: Record<PropertyKey, unknown>) => {
+      for (const key of getOwnKeys(map)) {
+        if (!(key in deep)) continue;
+        const value = map[key]!;
+        if (typeof value === "object")
+          process(value, deep[key] as Record<PropertyKey, unknown>);
+        else flat[value] = deep[key];
+      }
     };
     process(this.map, deep);
     return flat as Flatten<M, X>;
   }
 
   deepen<X extends Constraint.Flat<M, D>>(flat: X): Deepen<M, X> {
-    const process = (m: Map): Record<PropertyKey, unknown> => {
-      return Object.entries(m).reduce<Record<PropertyKey, unknown>>(
-        (d, [key, value]) => {
-          if (typeof value === "object") {
-            const deeper = process(value);
-            if (Object.keys(deeper).length) d[key] = deeper;
-          } else if (value in flat) d[key] = flat[value as keyof typeof flat];
-          return d;
-        },
-        {},
-      );
+    const process = (map: Map): Record<PropertyKey, unknown> => {
+      const result: Record<PropertyKey, unknown> = {};
+      for (const key of getOwnKeys(map)) {
+        const value = map[key]!;
+        if (typeof value === "object") {
+          const deeper = process(value);
+          if (Object.keys(deeper).length) result[key] = deeper;
+        } else if (value in flat) {
+          result[key] = flat[value as keyof typeof flat];
+        }
+      }
+      return result;
     };
     return process(this.map) as Deepen<M, X>;
   }

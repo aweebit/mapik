@@ -1,9 +1,10 @@
-import type {
-  DeepReadonlyRecord,
-  IsAny,
-  MutuallyAssignable,
-  Simplify,
-  ValueOf,
+import {
+  getOwnKeys,
+  type DeepReadonlyRecord,
+  type IsAny,
+  type MutuallyAssignable,
+  type Simplify,
+  type ValueOf,
 } from "./utils/index.js";
 
 export type Config<T, E = T> = {
@@ -228,11 +229,7 @@ export class Mapper<
     if (map instanceof Codec) return map[operation](source);
     const target: object = Object.create(Object.getPrototypeOf(source));
     const overwrites: Record<PropertyKey, unknown> = {};
-    const keys = [
-      ...Object.getOwnPropertyNames(map),
-      ...Object.getOwnPropertySymbols(map),
-    ];
-    for (const key of keys)
+    for (const key of getOwnKeys(map))
       overwrites[key] = this.transform(operation, source[key], map[key]!);
     return Object.assign(target, source, overwrites);
   }
