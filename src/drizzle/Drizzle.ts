@@ -1,86 +1,98 @@
 import {
   getColumns,
   getTableUniqueName,
+  is,
+  Table,
+  View,
   type InferSelectModel,
-  type Table,
-  type TableConfig,
+  type InferSelectViewModel,
 } from "drizzle-orm";
 import { MapperBase, type Constraint, type Map } from "../DeepFlat.js";
 import { identityMap, type IdentityMap } from "../utils/index.js";
 
 export * from "./EntityManager.js";
 
-export type MapToSelf<T extends Table> = IdentityMap<
-  keyof (T extends Table<TableConfig<infer TColumns>> ? TColumns : never) &
-    string
-> & {};
+export type MapToSelf<T extends Table | View> = IdentityMap<
+  keyof ReturnType<typeof getColumns<T>>
+>;
 
-export const mapToSelf = <T extends Table>(table: T): MapToSelf<T> => {
+export const mapToSelf = <T extends Table | View>(table: T): MapToSelf<T> => {
   return identityMap(
-    Object.keys(getColumns(table)) as Array<keyof InferSelectModel<T>>,
+    Object.keys(getColumns(table)) as Array<
+      keyof ReturnType<typeof getColumns<T>>
+    >,
   );
 };
 
-export class TableMapper<
-  T extends Table = Table,
-  const M extends Map<keyof InferSelectModel<T>> = Map<
-    keyof InferSelectModel<T>
-  >,
+export type InferSelect<T extends Table | View> = keyof (T extends Table
+  ? InferSelectModel<T>
+  : T extends View
+    ? InferSelectViewModel<T>
+    : never);
+
+export class Mapper<
+  T extends Table | View = Table | View,
+  const M extends Map<keyof MapToSelf<T>> = Map<keyof MapToSelf<T>>,
 > extends MapperBase<
   M,
-  Constraint.Deep<M, InferSelectModel<T>>,
+  Constraint.Deep<M, InferSelect<T>>,
   // @ts-expect-error
-  InferSelectModel<// no @ts-expect-error here
+  InferSelect<// no @ts-expect-error here
   T>
 > {
   constructor(
-    readonly table: T,
+    readonly source: T,
     map: M,
   ) {
     super(map);
   }
 
-  static make<T extends Table>(table: T): TableMapper<T, MapToSelf<T>>;
-  static make<T extends Table, const M extends Map<keyof InferSelectModel<T>>>(
-    table: T,
+  static make<T extends Table | View>(source: T): Mapper<T, MapToSelf<T>>;
+  static make<T extends Table | View, const M extends Map<keyof MapToSelf<T>>>(
+    source: T,
     deriveMap: (identityMap: MapToSelf<T>) => M,
-  ): TableMapper<T, M>;
-  static make<T extends Table, const M extends Map<keyof InferSelectModel<T>>>(
-    table: T,
+  ): Mapper<T, M>;
+  static make<T extends Table | View, const M extends Map<keyof MapToSelf<T>>>(
+    source: T,
     map: M,
-  ): TableMapper<T, M>;
-  static make<T extends Table, const M extends Map<keyof InferSelectModel<T>>>(
-    table: T,
+  ): Mapper<T, M>;
+  static make<T extends Table | View, const M extends Map<keyof MapToSelf<T>>>(
+    source: T,
     map?: M | ((identityMap: MapToSelf<T>) => M),
   ) {
-    return new TableMapper(
-      table,
+    return new Mapper(
+      source,
       typeof map === "function"
-        ? map(mapToSelf(table))
-        : (map ?? mapToSelf(table)),
+        ? map(mapToSelf(source))
+        : (map ?? mapToSelf(source)),
     );
   }
 }
 
-type GetTableMapper<
-  TMs extends readonly TableMapper[],
-  T extends TMs[number]["table"],
-> = { [K in keyof TMs]: T extends TMs[K]["table"] ? TMs[K] : never }[number];
+export type MapperFor<
+  Ms extends readonly Mapper[],
+  T extends Ms[number]["source"],
+> = {
+  [K in keyof Ms]: T extends Ms[K]["source"] ? Ms[K] : never;
+}[number];
 
-export function createMapper<const TMs extends readonly TableMapper[]>(
-  tableMappers: TMs,
+export function createMapperFor<const Ms extends readonly Mapper[]>(
+  mappers: Ms,
 ) {
-  const tableMapperMap = new WeakMap(
-    tableMappers.map((tableMapper) => [tableMapper.table, tableMapper]),
+  const mapperMap = new WeakMap(
+    mappers.map((mapper) => [mapper.source, mapper]),
   );
 
-  return <T extends TMs[number]["table"]>(table: T): GetTableMapper<TMs, T> => {
-    const tableMapper = tableMapperMap.get(table);
-    if (tableMapper === undefined) {
+  return <T extends Ms[number]["source"]>(source: T): MapperFor<Ms, T> => {
+    const mapper = mapperMap.get(source);
+    if (mapper === undefined) {
+      const sourceKind = is(source, Table) ? "table" : "view";
       throw new Error(
-        `No table mapper was registered for table ${getTableUniqueName(table)}`,
+        `No mapper was registered for ${sourceKind} ${getTableUniqueName(
+          source,
+        )}`,
       );
     }
-    return tableMapper as GetTableMapper<TMs, T>;
+    return mapper as MapperFor<Ms, T>;
   };
 }
