@@ -1,5 +1,5 @@
 import type {
-  DeepRecord,
+  DeepReadonlyRecord,
   IsAny,
   MutuallyAssignable,
   Simplify,
@@ -44,13 +44,13 @@ export class Codec<T, E = T> implements Config<T, E> {
 export const makeFor = Codec.makeFor;
 export const make = Codec.make;
 
-export type AnyMap = Codec<any> | DeepRecord<PropertyKey, Codec<any>>;
+export type AnyMap = Codec<any> | DeepReadonlyRecord<PropertyKey, Codec<any>>;
 
 export declare namespace Infer {
   type Side<S extends SideName, M extends AnyMap, X = unknown> =
     M extends Codec<infer T, infer E>
       ? PickSide<S, T, E>
-      : M extends DeepRecord<PropertyKey, Codec<any>>
+      : M extends DeepReadonlyRecord<PropertyKey, Codec<any>>
         ? Simplify<
             Omit<X, keyof M> &
               (keyof X & keyof M extends infer K extends keyof X
@@ -198,7 +198,7 @@ export class Mapper<
   T = IsAny<M> extends true ? any : Infer.Type<M>,
   E = IsAny<M> extends true ? any : Infer.Encoded<M>,
 > {
-  constructor(readonly map: M) {}
+  constructor(protected readonly map: M) {}
 
   static makeFor<X>() {
     return new MapperFor<X>();

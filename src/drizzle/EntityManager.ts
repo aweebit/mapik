@@ -33,7 +33,9 @@ export class EntityManager<
     readonly delimiter: D,
     readonly drizzleMapper: Drizzle.TableMapper<
       T,
-      Table extends T ? any : DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>
+      Table extends T
+        ? DeepFlat.Map<string>
+        : DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>
     >,
     readonly map: M,
   ) {
@@ -56,14 +58,29 @@ export class EntityManager<
     return this.drizzleMapper.flatten(this.effectMapper.encode(input) as any);
   }
 
-  decode<X extends Partial<InferSelectModel<T>>>(
+  decode<
+    X extends DeepFlat.Constraint.Flat<
+      Table extends T
+        ? DeepFlat.Map<string>
+        : DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
+      DeepFlat.Constraint.Deep<
+        Table extends T
+          ? DeepFlat.Map<string>
+          : DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
+        // @ts-expect-error
+        InferSelectModel<// no @ts-expect-error here
+        T>
+      >
+    >,
+  >(
     input: X,
   ): Codec.Decode<
     M,
     // @ts-expect-error
     DeepFlat.Deepen<
-      DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
-      // @ts-expect-error
+      Table extends T
+        ? DeepFlat.Map<string>
+        : DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
       X
     >,
     A,

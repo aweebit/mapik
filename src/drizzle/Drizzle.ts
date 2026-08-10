@@ -22,21 +22,18 @@ export const mapToSelf = <T extends Table>(table: T): MapToSelf<T> => {
 };
 
 export class TableMapper<
-  T extends Table,
-  const M extends Map<keyof InferSelectModel<T>>,
+  T extends Table = Table,
+  const M extends Map<keyof InferSelectModel<T>> = Map<
+    keyof InferSelectModel<T>
+  >,
 > extends Mapper<
   M,
-  Constraint.Deep<
-    M,
-    // @ts-expect-error
-    InferSelectModel<// no @ts-expect-error here
-    T>
-  >,
+  Constraint.Deep<M, InferSelectModel<T>>,
   // @ts-expect-error
   InferSelectModel<// no @ts-expect-error here
   T>
 > {
-  protected constructor(
+  constructor(
     readonly table: T,
     map: M,
   ) {
@@ -47,35 +44,32 @@ export class TableMapper<
   static override make<
     T extends Table,
     const M extends Map<keyof InferSelectModel<T>>,
-  >(
-    table: T,
-    derivePropertyMap: (identityMap: MapToSelf<T>) => M,
-  ): TableMapper<T, M>;
+  >(table: T, deriveMap: (identityMap: MapToSelf<T>) => M): TableMapper<T, M>;
   static override make<
     T extends Table,
     const M extends Map<keyof InferSelectModel<T>>,
-  >(table: T, propertyMap: M): TableMapper<T, M>;
+  >(table: T, map: M): TableMapper<T, M>;
   static override make<
     T extends Table,
     const M extends Map<keyof InferSelectModel<T>>,
-  >(table: T, propertyMap?: M | ((identityMap: MapToSelf<T>) => M)) {
+  >(table: T, map?: M | ((identityMap: MapToSelf<T>) => M)) {
     return new TableMapper(
       table,
-      typeof propertyMap === "function"
-        ? propertyMap(mapToSelf(table))
-        : (propertyMap ?? mapToSelf(table)),
+      typeof map === "function"
+        ? map(mapToSelf(table))
+        : (map ?? mapToSelf(table)),
     );
   }
 }
 
 type GetTableMapper<
-  TMs extends readonly TableMapper<Table, any>[],
+  TMs extends readonly TableMapper[],
   T extends TMs[number]["table"],
 > = { [K in keyof TMs]: T extends TMs[K]["table"] ? TMs[K] : never }[number];
 
-export function createMapper<
-  const TMs extends readonly TableMapper<Table, any>[],
->(tableMappers: TMs) {
+export function createMapper<const TMs extends readonly TableMapper[]>(
+  tableMappers: TMs,
+) {
   const tableMapperMap = new WeakMap(
     tableMappers.map((tableMapper) => [tableMapper.table, tableMapper]),
   );
