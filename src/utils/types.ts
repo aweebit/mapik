@@ -21,6 +21,10 @@ export type OptionalKeyOf<T, K extends keyof T = keyof T> = {
   [P in K]-?: {} extends Pick<T, P> ? P : never;
 }[K];
 
+export type DeepRequired<T> = {
+  [P in keyof T]-?: DeepRequired<T[P]>;
+};
+
 export type DeepReadonlyRecord<K extends PropertyKey, T> = {
   readonly [P in K]: T | DeepReadonlyRecord<K, T>;
 };

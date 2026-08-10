@@ -14,6 +14,16 @@ export type Map<FlatKey extends PropertyKey = PropertyKey> = DeepReadonlyRecord<
   FlatKey
 >;
 
+export namespace Map {
+  export type For<D extends Record<PropertyKey, unknown>> = {
+    readonly [K in keyof D]?:
+      | PropertyKey
+      | (ValueOf<D, K> extends Record<PropertyKey, unknown>
+          ? For<ValueOf<D, K>>
+          : never);
+  };
+}
+
 export type FlatKeyOf<M extends Map> = FlatKeyOfHelper<M> &
   (M extends Map<infer FlatKey> ? FlatKey : never);
 

@@ -37,7 +37,7 @@ export class Codec<T, E = T> implements Config<T, E> {
     return new CodecFor<X>();
   }
 
-  static make<T, E>(config: Config<T, E>) {
+  static make<T, E = T>(config: Config<T, E>) {
     return new Codec(config);
   }
 }
