@@ -29,14 +29,14 @@ export class EntityManager<
       ? B
       : never,
 > {
-  readonly effectMapper: Codec.Mapper<M, A, B>;
+  readonly codecMapper: Codec.Mapper<M, A, B>;
 
   constructor(
     readonly delimiter: D,
     readonly drizzleMapper: Drizzle.Mapper<T, EntityManager.DrizzleMap<D, T>>,
     readonly map: M,
   ) {
-    this.effectMapper = new Codec.Mapper(map);
+    this.codecMapper = new Codec.Mapper(map);
   }
 
   encode<X extends Codec.Constraint.Type<M, A, B>>(
@@ -52,7 +52,7 @@ export class EntityManager<
       B
     >
   > {
-    return this.drizzleMapper.flatten(this.effectMapper.encode(input) as any);
+    return this.drizzleMapper.flatten(this.codecMapper.encode(input) as any);
   }
 
   decode<
@@ -73,7 +73,7 @@ export class EntityManager<
     A,
     B
   > {
-    return this.effectMapper.decode(this.drizzleMapper.deepen(input) as any);
+    return this.codecMapper.decode(this.drizzleMapper.deepen(input) as any);
   }
 }
 
