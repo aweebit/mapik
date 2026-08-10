@@ -132,7 +132,7 @@ type DeepenHelper<
 > = Simplify<
   { -readonly [K in FK as MapFlatKeyBack<M, K>]: F[K] } & PropagateRequired<
     RemoveRequiredNever<{
-      [K in keyof M]: M[K] extends infer MV
+      -readonly [K in keyof M]: M[K] extends infer MV
         ? MV extends Map
           ? F extends Constraint.Flat<MV>
             ? DeepenHelper<MV, F>
