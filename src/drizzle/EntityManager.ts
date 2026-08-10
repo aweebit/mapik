@@ -4,21 +4,28 @@ import { createDeepenAtDelimiter, type DeepenAtDelimiter } from "../Utils.js";
 import type { IsAny } from "../utils/index.js";
 import { Drizzle } from "./index.js";
 
+export namespace EntityManager {
+  export type DrizzleMap<D extends string, T extends Table | View> =
+    | Table
+    | View extends T
+    ? DeepFlat.Map<string>
+    : DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>;
+
+  export type IntermediateType<
+    D extends string,
+    T extends Table | View,
+  > = DeepFlat.Constraint.Deep<DrizzleMap<D, T>, Drizzle.InferSelect<T>>;
+}
+
 export class EntityManager<
   D extends string,
   A = any,
   T extends Table | View = Table | View,
   const M extends Codec.Map<A, B> = any,
-  B extends DeepFlat.Constraint.Deep<
-    DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
-    Drizzle.InferSelect<T>
-  > = IsAny<M> extends true
+  B extends EntityManager.IntermediateType<D, T> = IsAny<M> extends true
     ? any
     : Codec.Infer.Encoded<M, A> extends infer B extends
-          DeepFlat.Constraint.Deep<
-            DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
-            Drizzle.InferSelect<T>
-          >
+          EntityManager.IntermediateType<D, T>
       ? B
       : never,
 > {
@@ -26,12 +33,7 @@ export class EntityManager<
 
   constructor(
     readonly delimiter: D,
-    readonly drizzleMapper: Drizzle.Mapper<
-      T,
-      Table | View extends T
-        ? DeepFlat.Map<string>
-        : DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>
-    >,
+    readonly drizzleMapper: Drizzle.Mapper<T, EntityManager.DrizzleMap<D, T>>,
     readonly map: M,
   ) {
     this.effectMapper = new Codec.Mapper(map);
@@ -55,15 +57,8 @@ export class EntityManager<
 
   decode<
     X extends DeepFlat.Constraint.Flat<
-      Table | View extends T
-        ? DeepFlat.Map<string>
-        : DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
-      DeepFlat.Constraint.Deep<
-        Table | View extends T
-          ? DeepFlat.Map<string>
-          : DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
-        Drizzle.InferSelect<T>
-      >
+      EntityManager.DrizzleMap<D, T>,
+      EntityManager.IntermediateType<D, T>
     >,
   >(
     input: X,
@@ -71,9 +66,8 @@ export class EntityManager<
     M,
     // @ts-expect-error
     DeepFlat.Deepen<
-      Table | View extends T
-        ? DeepFlat.Map<string>
-        : DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
+      // no @ts-expect-error here
+      EntityManager.DrizzleMap<D, T>,
       X
     >,
     A,
@@ -103,14 +97,10 @@ export const createCreateEntityManager = <D extends string>(delimiter: D) => {
             ? never
             : {}
           : never,
-      B extends DeepFlat.Constraint.Deep<
-        DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
-        Drizzle.InferSelect<T>
-      > = Codec.Infer.Encoded<M, A> extends infer B extends
-        DeepFlat.Constraint.Deep<
-          DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
-          Drizzle.InferSelect<T>
-        >
+      B extends EntityManager.IntermediateType<D, T> = Codec.Infer.Encoded<
+        M,
+        A
+      > extends infer B extends EntityManager.IntermediateType<D, T>
         ? B
         : never,
     >(
