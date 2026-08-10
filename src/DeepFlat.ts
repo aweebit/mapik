@@ -160,7 +160,8 @@ export class MapperBase<
   D extends Constraint.Deep<M> = Constraint.Deep<M>,
   F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
 > {
-  // TODO: Currently no inference of D and F from subclass types
+  // TODO: Currently no inference of D and F from subclass types due to
+  // https://github.com/microsoft/TypeScript/issues/63737
 
   constructor(readonly map: M) {
     this.flatten = this.flatten.bind(this);
