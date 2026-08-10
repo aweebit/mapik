@@ -9,7 +9,7 @@ export namespace EntityManager {
     | Table
     | View extends T
     ? DeepFlat.Map<string>
-    : DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>;
+    : DeepenAtDelimiter<D, Drizzle.IdentityMap<T>>;
 
   export type IntermediateType<
     D extends string,
@@ -42,7 +42,7 @@ export class EntityManager<
   encode<X extends Codec.Constraint.Type<M, A, B>>(
     input: X,
   ): DeepFlat.Flatten<
-    DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>,
+    DeepenAtDelimiter<D, Drizzle.IdentityMap<T>>,
     // @ts-expect-error
     Codec.Encode<
       // no @ts-expect-error here
@@ -82,7 +82,7 @@ export const createCreateEntityManager = <D extends string>(delimiter: D) => {
 
   const makeDrizzleMapper = <T extends Table>(
     table: T,
-  ): Drizzle.Mapper<T, DeepenAtDelimiter<D, Drizzle.MapToSelf<T>>> =>
+  ): Drizzle.Mapper<T, DeepenAtDelimiter<D, Drizzle.IdentityMap<T>>> =>
     Drizzle.Mapper.make(table, deepenAtDelimiter);
 
   return function createEntityManager<A>() {

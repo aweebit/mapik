@@ -1,3 +1,4 @@
+import type { IdentityMap } from "./Utils.js";
 import type {
   DeepReadonlyRecord,
   OptionalKeyOf,
@@ -60,7 +61,7 @@ export declare namespace Constraint {
     F extends { readonly [K in FlatKeyOf<M>]?: unknown } = {
       readonly [K in FlatKeyOf<M>]?: unknown;
     },
-  > = DeepHelper<M, F>;
+  > = M extends Map ? { readonly [K in keyof M]?: DeepHelper<M[K], F> } : never;
 
   type DeepHelper<
     M extends Map | PropertyKey,
@@ -68,7 +69,7 @@ export declare namespace Constraint {
   > = M extends PropertyKey
     ? ValueOf<F, M>
     : M extends Map
-      ? { readonly [K in keyof M]?: DeepHelper<M[K], F> }
+      ? Deep<M, F>
       : never;
 }
 
@@ -155,17 +156,30 @@ export class MakeFrom<const M extends Map> {
   }
 }
 
+export abstract class AbstractMapper<
+  M extends Map = Map,
+  D extends Constraint.Deep<M> = Constraint.Deep<M>,
+  F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
+> {
+  constructor() {
+    this.flatten = this.flatten.bind(this);
+    this.deepen = this.deepen.bind(this);
+  }
+
+  abstract flatten<X extends Constraint.Deep<M, F>>(deep: X): Flatten<M, X>;
+  abstract deepen<X extends Constraint.Flat<M, D>>(flat: X): Deepen<M, X>;
+}
+
 export class MapperBase<
   const M extends Map = Map,
   D extends Constraint.Deep<M> = Constraint.Deep<M>,
   F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
-> {
+> extends AbstractMapper<M, D, F> {
   // TODO: Currently no inference of D and F from subclass types due to
   // https://github.com/microsoft/TypeScript/issues/63737
 
   constructor(readonly map: M) {
-    this.flatten = this.flatten.bind(this);
-    this.deepen = this.deepen.bind(this);
+    super();
   }
 
   flatten<X extends Constraint.Deep<M, F>>(deep: X): Flatten<M, X> {
@@ -215,5 +229,37 @@ export class Mapper<
     F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
   >(map: M) {
     return new Mapper<M, D, F>(map);
+  }
+}
+
+export class IdentityMapper<
+  T extends Record<PropertyKey, unknown> = Record<PropertyKey, unknown>,
+> extends AbstractMapper<
+  IdentityMap<keyof T>,
+  Constraint.Deep<IdentityMap<keyof T>, T>
+> {
+  static make<T extends Record<PropertyKey, unknown>>() {
+    return new IdentityMapper<T>();
+  }
+
+  flatten<
+    X extends Constraint.Deep<
+      IdentityMap<keyof T>,
+      Constraint.Flat<
+        IdentityMap<keyof T>,
+        Constraint.Deep<IdentityMap<keyof T>, T>
+      >
+    >,
+  >(deep: X) {
+    return { ...deep } as X & Flatten<IdentityMap<keyof T>, X>;
+  }
+
+  deepen<
+    X extends Constraint.Flat<
+      IdentityMap<keyof T>,
+      Constraint.Deep<IdentityMap<keyof T>, T>
+    >,
+  >(flat: X) {
+    return { ...flat } as X & Deepen<IdentityMap<keyof T>, X> & Deepen<Map, X>;
   }
 }

@@ -7,17 +7,18 @@ import {
   type InferSelectModel,
   type InferSelectViewModel,
 } from "drizzle-orm";
-import { MapperBase, type Constraint, type Map } from "../DeepFlat.js";
-import { identityMap, type IdentityMap } from "../utils/index.js";
+import { DeepFlat, Utils } from "../index.js";
 
 export * from "./EntityManager.js";
 
-export type MapToSelf<T extends Table | View> = IdentityMap<
+export type IdentityMap<T extends Table | View> = Utils.IdentityMap<
   keyof ReturnType<typeof getColumns<T>>
 >;
 
-export const mapToSelf = <T extends Table | View>(table: T): MapToSelf<T> => {
-  return identityMap(
+export const identityMap = <T extends Table | View>(
+  table: T,
+): IdentityMap<T> => {
+  return Utils.identityMap(
     Object.keys(getColumns(table)) as Array<
       keyof ReturnType<typeof getColumns<T>>
     >,
@@ -32,40 +33,63 @@ export type InferSelect<T extends Table | View> = keyof (T extends Table
 
 export class Mapper<
   T extends Table | View = Table | View,
-  const M extends Map<keyof MapToSelf<T>> = Map<keyof MapToSelf<T>>,
-> extends MapperBase<
+  M extends DeepFlat.Map<keyof IdentityMap<T>> = DeepFlat.Map<
+    keyof IdentityMap<T>
+  >,
+> extends DeepFlat.AbstractMapper<
   M,
-  Constraint.Deep<M, InferSelect<T>>,
+  DeepFlat.Constraint.Deep<M, InferSelect<T>>,
   // @ts-expect-error
   InferSelect<// no @ts-expect-error here
   T>
 > {
   constructor(
     readonly source: T,
-    map: M,
+    protected readonly underlyingMapper: DeepFlat.AbstractMapper<
+      M,
+      DeepFlat.Constraint.Deep<M, InferSelect<T>>,
+      // @ts-expect-error
+      InferSelect<// no @ts-expect-error here
+      T>
+    >,
   ) {
-    super(map);
+    super();
   }
 
-  static make<T extends Table | View>(source: T): Mapper<T, MapToSelf<T>>;
-  static make<T extends Table | View, const M extends Map<keyof MapToSelf<T>>>(
-    source: T,
-    deriveMap: (identityMap: MapToSelf<T>) => M,
-  ): Mapper<T, M>;
-  static make<T extends Table | View, const M extends Map<keyof MapToSelf<T>>>(
-    source: T,
-    map: M,
-  ): Mapper<T, M>;
-  static make<T extends Table | View, const M extends Map<keyof MapToSelf<T>>>(
-    source: T,
-    map?: M | ((identityMap: MapToSelf<T>) => M),
-  ) {
-    return new Mapper(
+  static make<T extends Table | View>(source: T): Mapper<T>;
+  static make<
+    T extends Table | View,
+    const M extends DeepFlat.Map<keyof IdentityMap<T>>,
+  >(source: T, deriveMap: (identityMap: IdentityMap<T>) => M): Mapper<T, M>;
+  static make<
+    T extends Table | View,
+    const M extends DeepFlat.Map<keyof IdentityMap<T>>,
+  >(source: T, map: M): Mapper<T, M>;
+  static make<
+    T extends Table | View,
+    const M extends DeepFlat.Map<keyof IdentityMap<T>>,
+  >(source: T, map?: M | ((identityMap: IdentityMap<T>) => M)) {
+    return new Mapper<T, M>(
       source,
-      typeof map === "function"
-        ? map(mapToSelf(source))
-        : (map ?? mapToSelf(source)),
+      map === undefined
+        ? (new DeepFlat.IdentityMapper() as any)
+        : new DeepFlat.Mapper(
+            typeof map === "function" ? map(identityMap(source)) : map,
+          ),
     );
+  }
+
+  flatten<X extends DeepFlat.Constraint.Deep<M, InferSelect<T>>>(deep: X) {
+    return this.underlyingMapper.flatten(deep);
+  }
+
+  deepen<
+    X extends DeepFlat.Constraint.Flat<
+      M,
+      DeepFlat.Constraint.Deep<M, InferSelect<T>>
+    >,
+  >(flat: X) {
+    return this.underlyingMapper.deepen(flat);
   }
 }
 
