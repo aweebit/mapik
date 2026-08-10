@@ -145,8 +145,8 @@ type DeepenHelper<
   >
 >;
 
-export class MakeFrom<const M extends Map> {
-  constructor(readonly map: M) {}
+export class MapperFrom<const M extends Map> {
+  constructor(private readonly map: M) {}
 
   flatten<D extends Constraint.Deep<M>>() {
     return new Mapper<M, D>(this.map);
@@ -222,7 +222,7 @@ export class Mapper<
   F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
 > extends MapperBase<M, D, F> {
   static makeFrom<const M extends Map>(map: M) {
-    return new MakeFrom(map);
+    return new MapperFrom(map);
   }
 
   static make<
