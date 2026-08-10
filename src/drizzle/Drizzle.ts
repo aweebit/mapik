@@ -93,21 +93,17 @@ export class Mapper<
   }
 }
 
-export type MapperFor<
-  Ms extends readonly Mapper[],
-  T extends Ms[number]["source"],
-> = {
-  [K in keyof Ms]: T extends Ms[K]["source"] ? Ms[K] : never;
-}[number];
+export type ExtractMapper<
+  M extends Mapper,
+  T extends M["source"],
+> = M extends unknown ? (T extends M["source"] ? M : never) : never;
 
-export function createMapperFor<const Ms extends readonly Mapper[]>(
-  mappers: Ms,
-) {
+export function createMapper<M extends Mapper>(mappers: readonly M[]) {
   const mapperMap = new WeakMap(
     mappers.map((mapper) => [mapper.source, mapper]),
   );
 
-  return <T extends Ms[number]["source"]>(source: T): MapperFor<Ms, T> => {
+  return <T extends M["source"]>(source: T): ExtractMapper<M, T> => {
     const mapper = mapperMap.get(source);
     if (mapper === undefined) {
       const sourceKind = is(source, Table) ? "table" : "view";
@@ -117,6 +113,6 @@ export function createMapperFor<const Ms extends readonly Mapper[]>(
         )}`,
       );
     }
-    return mapper as MapperFor<Ms, T>;
+    return mapper as ExtractMapper<M, T>;
   };
 }
