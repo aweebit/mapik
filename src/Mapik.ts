@@ -1,7 +1,7 @@
 import { Codec, DeepFlat } from "./index.js";
 import type { DeepRequired, IsAny } from "./utils/index.js";
 
-export class Mapik<
+export class MapikBase<
   CM extends Codec.Map<T, D> = any,
   DFM extends DeepFlat.Map = DeepFlat.Map,
   T = IsAny<CM> extends true ? any : Codec.Infer.Type<CM>,
@@ -14,30 +14,6 @@ export class Mapik<
   ) {
     this.encode = this.encode.bind(this);
     this.decode = this.decode.bind(this);
-  }
-
-  static makeFor<X>() {
-    return new MapikFor<X>();
-  }
-
-  static makeFrom<const DFM extends DeepFlat.Map>(deepFlatMap: DFM) {
-    return new MapikFrom(deepFlatMap);
-  }
-
-  static make<
-    CM extends Codec.Map<T, D>,
-    DFM extends DeepFlat.Map,
-    T = IsAny<CM> extends true ? any : Codec.Infer.Type<CM>,
-    D extends DeepFlat.Constraint.Deep<DFM> = DeepFlat.Constraint.Deep<DFM>,
-    F extends DeepFlat.Constraint.Flat<DFM, D> = DeepFlat.Constraint.Flat<
-      DFM,
-      D
-    >,
-  >(
-    codecMapper: Codec.Mapper<CM, T, IsAny<CM> extends true ? any : D>,
-    deepFlatMapper: DeepFlat.MapperBase<DFM, D, F>,
-  ) {
-    return new Mapik<CM, DFM, T, D, F>(codecMapper, deepFlatMapper);
   }
 
   encode<X extends Codec.Constraint.Type<CM, T, D>>(
@@ -70,6 +46,38 @@ export class Mapik<
     D
   > {
     return this.codecMapper.decode(this.deepFlatMapper.deepen(input) as any);
+  }
+}
+
+export class Mapik<
+  CM extends Codec.Map<T, D> = any,
+  DFM extends DeepFlat.Map = DeepFlat.Map,
+  T = IsAny<CM> extends true ? any : Codec.Infer.Type<CM>,
+  D extends DeepFlat.Constraint.Deep<DFM> = DeepFlat.Constraint.Deep<DFM>,
+  F extends DeepFlat.Constraint.Flat<DFM, D> = DeepFlat.Constraint.Flat<DFM, D>,
+> extends MapikBase<CM, DFM, T, D, F> {
+  static makeFor<X>() {
+    return new MapikFor<X>();
+  }
+
+  static makeFrom<const DFM extends DeepFlat.Map>(deepFlatMap: DFM) {
+    return new MapikFrom(deepFlatMap);
+  }
+
+  static make<
+    CM extends Codec.Map<T, D>,
+    DFM extends DeepFlat.Map,
+    T = IsAny<CM> extends true ? any : Codec.Infer.Type<CM>,
+    D extends DeepFlat.Constraint.Deep<DFM> = DeepFlat.Constraint.Deep<DFM>,
+    F extends DeepFlat.Constraint.Flat<DFM, D> = DeepFlat.Constraint.Flat<
+      DFM,
+      D
+    >,
+  >(
+    codecMapper: Codec.Mapper<CM, T, IsAny<CM> extends true ? any : D>,
+    deepFlatMapper: DeepFlat.MapperBase<DFM, D, F>,
+  ) {
+    return new Mapik<CM, DFM, T, D, F>(codecMapper, deepFlatMapper);
   }
 }
 
