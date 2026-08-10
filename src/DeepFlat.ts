@@ -155,7 +155,7 @@ export class MakeFrom<const M extends Map> {
   }
 }
 
-export class Mapper<
+export class MapperBase<
   const M extends Map = Map,
   D extends Constraint.Deep<M> = Constraint.Deep<M>,
   F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
@@ -165,18 +165,6 @@ export class Mapper<
   constructor(readonly map: M) {
     this.flatten = this.flatten.bind(this);
     this.deepen = this.deepen.bind(this);
-  }
-
-  static makeFrom<const M extends Map>(map: M) {
-    return new MakeFrom(map);
-  }
-
-  static make<
-    const M extends Map,
-    D extends Constraint.Deep<M> = Constraint.Deep<M>,
-    F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
-  >(map: M) {
-    return new Mapper<M, D, F>(map);
   }
 
   flatten<X extends Constraint.Deep<M, F>>(deep: X): Flatten<M, X> {
@@ -208,5 +196,23 @@ export class Mapper<
       );
     };
     return process(this.map) as Deepen<M, X>;
+  }
+}
+
+export class Mapper<
+  const M extends Map = Map,
+  D extends Constraint.Deep<M> = Constraint.Deep<M>,
+  F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
+> extends MapperBase<M, D, F> {
+  static makeFrom<const M extends Map>(map: M) {
+    return new MakeFrom(map);
+  }
+
+  static make<
+    const M extends Map,
+    D extends Constraint.Deep<M> = Constraint.Deep<M>,
+    F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
+  >(map: M) {
+    return new Mapper<M, D, F>(map);
   }
 }

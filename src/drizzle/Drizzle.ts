@@ -5,7 +5,7 @@ import {
   type Table,
   type TableConfig,
 } from "drizzle-orm";
-import { Mapper, type Constraint, type Map } from "../DeepFlat.js";
+import { MapperBase, type Constraint, type Map } from "../DeepFlat.js";
 import { identityMap, type IdentityMap } from "../utils/index.js";
 
 export * from "./EntityManager.js";
@@ -26,7 +26,7 @@ export class TableMapper<
   const M extends Map<keyof InferSelectModel<T>> = Map<
     keyof InferSelectModel<T>
   >,
-> extends Mapper<
+> extends MapperBase<
   M,
   Constraint.Deep<M, InferSelectModel<T>>,
   // @ts-expect-error
@@ -40,19 +40,19 @@ export class TableMapper<
     super(map);
   }
 
-  static override make<T extends Table>(table: T): TableMapper<T, MapToSelf<T>>;
-  static override make<
-    T extends Table,
-    const M extends Map<keyof InferSelectModel<T>>,
-  >(table: T, deriveMap: (identityMap: MapToSelf<T>) => M): TableMapper<T, M>;
-  static override make<
-    T extends Table,
-    const M extends Map<keyof InferSelectModel<T>>,
-  >(table: T, map: M): TableMapper<T, M>;
-  static override make<
-    T extends Table,
-    const M extends Map<keyof InferSelectModel<T>>,
-  >(table: T, map?: M | ((identityMap: MapToSelf<T>) => M)) {
+  static make<T extends Table>(table: T): TableMapper<T, MapToSelf<T>>;
+  static make<T extends Table, const M extends Map<keyof InferSelectModel<T>>>(
+    table: T,
+    deriveMap: (identityMap: MapToSelf<T>) => M,
+  ): TableMapper<T, M>;
+  static make<T extends Table, const M extends Map<keyof InferSelectModel<T>>>(
+    table: T,
+    map: M,
+  ): TableMapper<T, M>;
+  static make<T extends Table, const M extends Map<keyof InferSelectModel<T>>>(
+    table: T,
+    map?: M | ((identityMap: MapToSelf<T>) => M),
+  ) {
     return new TableMapper(
       table,
       typeof map === "function"
