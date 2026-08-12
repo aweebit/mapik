@@ -6,9 +6,9 @@
   "repository": "github:aweebit/mapik",
   "exports": {
     ".": "./dist/index.js",
-    "./drizzle/kysely/*": "./dist/drizzle/kysely/*.js",
-    "./drizzle/*": "./dist/drizzle/*.js",
-    "./*": "./dist/*.js"
+    "./drizzle": "./dist/drizzle/index.js",
+    "./drizzle/kysely": "./dist/drizzle/kysely/index.js",
+    "./*": "./dist/*"
   },
   "files": [
     "src/**/*.ts",
