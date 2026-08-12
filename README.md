@@ -55,12 +55,12 @@ const originalPartialData = mapper.deepen(flattenedPartialData); // same as part
 ### Drizzle + Effect Schema
 
 ```ts
+import { Codec } from "@aweebit/mapik";
+import { Drizzle } from "@aweebit/mapik/drizzle";
 import { getColumns } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { doublePrecision, pgTable, timestamp } from "drizzle-orm/pg-core";
 import { Schema, Struct } from "effect";
-import { Codec } from "@aweebit/mapik";
-import { Drizzle } from "@aweebit/mapik/drizzle";
 
 const experimentDataTable = pgTable("experiment_data", {
   timestamp: timestamp({ withTimezone: true }).primaryKey(),
