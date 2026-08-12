@@ -18,7 +18,8 @@
     "dist/**/*.d.ts.map"
   ],
   "scripts": {
-    "build": "rimraf dist && tsc"
+    "build": "rimraf dist && tsc",
+    "prepack": "npm run build"
   },
   "peerDependencies": {
     "drizzle-orm": "^1.0.0-rc.1",
