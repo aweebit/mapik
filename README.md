@@ -1,3 +1,5 @@
+[![NPM Version](https://img.shields.io/npm/v/%40aweebit%2Fmapik)](https://www.npmjs.com/package/@aweebit/mapik)
+
 > [!WARNING]
 > The library is still in the early stages of development and is not production-ready yet.
 
