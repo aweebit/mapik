@@ -1,15 +1,15 @@
 > [!WARNING]
 > The library is still in the early stages of development and is not production-ready yet.
 
-### Mapik
+## Mapik
 - Facilitates conversion between deeply nested objects and their corresponding flat rows in a relational database
 - Supports conversion of objects only partially matching the expected structure, such as those resulting from SELECT queries that only select a subset of a table's columns
 - Offers exceptional type safety with its advanced TypeScript types
 - Comes with built-in convenience wrappers for Drizzle
 
-### Examples
+## Examples
 
-#### Simple example
+### Simple example
 
 ```ts
 import { DeepFlat } from "@aweebit/mapik";
@@ -50,15 +50,15 @@ const originalData = mapper.deepen(flattenedData); // same as data
 const originalPartialData = mapper.deepen(flattenedPartialData); // same as partialData
 ```
 
-#### Drizzle + Effect Schema
+### Drizzle + Effect Schema
 
 ```ts
 import { getColumns } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { doublePrecision, pgTable, timestamp } from "drizzle-orm/pg-core";
 import { Schema, Struct } from "effect";
-import { Codec } from "mapik";
-import { Drizzle } from "mapik/drizzle";
+import { Codec } from "@aweebit/mapik";
+import { Drizzle } from "@aweebit/mapik/drizzle";
 
 const experimentDataTable = pgTable("experiment_data", {
   timestamp: timestamp({ withTimezone: true }).primaryKey(),
