@@ -12,7 +12,7 @@
 #### Simple example
 
 ```ts
-import { DeepFlat } from "mapik";
+import { DeepFlat } from "@aweebit/mapik";
 
 const mapper = new DeepFlat.Mapper({
   timestamp: "time",
