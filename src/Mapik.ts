@@ -33,19 +33,19 @@ export class MapikBase<
   }
 
   decode<X extends DeepFlat.Constraint.Flat<DFM, D>>(
-    input: X,
-  ): Codec.Decode<
+    input: DeepFlat.Deepen<DFM, X> extends Codec.Constraint.Encoded<CM, T, D>
+      ? X
+      : never,
+  ): DeepFlat.Deepen<DFM, X> extends infer U extends Codec.Constraint.Encoded<
     CM,
-    // @ts-expect-error
-    DeepFlat.Deepen<
-      // no @ts-expect-error here
-      DFM,
-      X
-    >,
     T,
     D
-  > {
-    return this.codecMapper.decode(this.deepFlatMapper.deepen(input) as any);
+  >
+    ? Codec.Decode<CM, U, T, D>
+    : never {
+    return this.codecMapper.decode(
+      this.deepFlatMapper.deepen(input) as any,
+    ) as any;
   }
 }
 

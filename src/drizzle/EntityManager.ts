@@ -61,19 +61,19 @@ export class EntityManager<
       EntityManager.IntermediateType<D, T>
     >,
   >(
-    input: X,
-  ): Codec.Decode<
-    M,
-    // @ts-expect-error
-    DeepFlat.Deepen<
-      // no @ts-expect-error here
+    input: DeepFlat.Deepen<
       EntityManager.DrizzleMap<D, T>,
       X
-    >,
-    A,
-    B
-  > {
-    return this.codecMapper.decode(this.drizzleMapper.deepen(input) as any);
+    > extends Codec.Constraint.Encoded<M, A, B>
+      ? X
+      : never,
+  ): DeepFlat.Deepen<EntityManager.DrizzleMap<D, T>, X> extends infer U extends
+    Codec.Constraint.Encoded<M, A, B>
+    ? Codec.Decode<M, DeepFlat.Deepen<EntityManager.DrizzleMap<D, T>, X>, A, B>
+    : never {
+    return this.codecMapper.decode(
+      this.drizzleMapper.deepen(input) as any,
+    ) as any;
   }
 }
 
