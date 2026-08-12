@@ -1,4 +1,4 @@
-import type { IdentityMap } from "./Utils.js";
+import { type IdentityMap } from "./Utils.js";
 import {
   getOwnKeys,
   type DeepReadonlyRecord,

@@ -1,5 +1,5 @@
 import type { InferInsertModel, InferSelectModel, Table } from "drizzle-orm";
-import { type ColumnType } from "kysely";
+import type { ColumnType } from "kysely";
 
 export type UnsafeKyselifyTable<T extends Table> = T extends unknown
   ? {
