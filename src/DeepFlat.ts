@@ -269,7 +269,7 @@ export class IdentityMapper<
       >
     >,
   >(deep: X) {
-    return { ...deep } as X & Flatten<IdentityMap<keyof T>, X>;
+    return { ...deep } as Flatten<IdentityMap<keyof T>, X>;
   }
 
   deepen<
@@ -278,6 +278,6 @@ export class IdentityMapper<
       Constraint.Deep<IdentityMap<keyof T>, T>
     >,
   >(flat: X) {
-    return { ...flat } as X & Deepen<IdentityMap<keyof T>, X> & Deepen<Map, X>;
+    return { ...flat } as Deepen<IdentityMap<keyof T>, X>;
   }
 }
