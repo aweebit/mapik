@@ -1,6 +1,7 @@
 import { type IdentityMap } from "./Utils.js";
 import {
   getOwnKeys,
+  typePropertyError,
   type DeepReadonlyRecord,
   type OptionalKeyOf,
   type PropagateRequired,
@@ -172,6 +173,14 @@ export abstract class AbstractMapper<
   D extends Constraint.Deep<M> = Constraint.Deep<M>,
   F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
 > {
+  get Deep(): D {
+    throw typePropertyError();
+  }
+
+  get Flat(): F {
+    throw typePropertyError();
+  }
+
   constructor() {
     this.flatten = this.flatten.bind(this);
     this.deepen = this.deepen.bind(this);
@@ -186,9 +195,6 @@ export class MapperBase<
   D extends Constraint.Deep<M> = Constraint.Deep<M>,
   F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
 > extends AbstractMapper<M, D, F> {
-  // TODO: Currently no inference of D and F from subclass types due to
-  // https://github.com/microsoft/TypeScript/issues/63737
-
   constructor(readonly map: M) {
     super();
   }
