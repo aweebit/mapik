@@ -256,8 +256,15 @@ export class IdentityMapper<
   IdentityMap<keyof T>,
   Constraint.Deep<IdentityMap<keyof T>, T>
 > {
-  static make<T extends Record<PropertyKey, unknown>>() {
-    return new IdentityMapper<T>();
+  static #instance?: IdentityMapper;
+
+  protected constructor() {
+    super();
+  }
+
+  static for<T extends Record<PropertyKey, unknown>>() {
+    IdentityMapper.#instance ??= new IdentityMapper();
+    return IdentityMapper.#instance as IdentityMapper<T>;
   }
 
   flatten<

@@ -72,7 +72,7 @@ export class Mapper<
     return new Mapper<T, M>(
       source,
       map === undefined
-        ? (new DeepFlat.IdentityMapper() as any)
+        ? (DeepFlat.IdentityMapper.for() as any)
         : new DeepFlat.Mapper(
             typeof map === "function" ? map(identityMap(source)) : map,
           ),
