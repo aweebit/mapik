@@ -19,6 +19,7 @@ export type DeepenAtDelimiter<
   D extends string,
   T extends Record<string, unknown>,
 > = DeepSimplify<
+  // ^ FIXME (causes issues with Date)
   {
     -readonly [K in keyof T as K extends `${string}${D}${string}`
       ? never
@@ -45,7 +46,7 @@ type DeepenAtDelimiterHelper<
   ? PropagateRequired<{ [P in A]: DeepenAtDelimiterHelper<T, D, B, V> }>
   : { -readonly [P in keyof T as K]: V };
 
-type ValidateDeepenAtDelimiterInput<
+export type ValidateDeepenAtDelimiterInput<
   D extends string,
   T extends Record<string, unknown>,
 > = (

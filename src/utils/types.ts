@@ -25,8 +25,8 @@ export type DeepRequired<T> = {
   [P in keyof T]-?: DeepRequired<T[P]>;
 };
 
-export type DeepReadonlyRecord<K extends PropertyKey, T> = {
-  readonly [P in K]: T | DeepReadonlyRecord<K, T>;
+export type DeepReadonlyOptionalRecord<K extends PropertyKey, T> = {
+  readonly [P in K]?: T | DeepReadonlyOptionalRecord<K, T>;
 };
 
 export type PropagateRequired<

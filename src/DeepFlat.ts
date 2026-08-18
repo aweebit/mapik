@@ -2,7 +2,7 @@ import { type IdentityMap } from "./Utils.js";
 import {
   getOwnKeys,
   typePropertyError,
-  type DeepReadonlyRecord,
+  type DeepReadonlyOptionalRecord,
   type OptionalKeyOf,
   type PropagateRequired,
   type Simplify,
@@ -10,10 +10,8 @@ import {
   type ValueOf,
 } from "./utils/index.js";
 
-export type Map<FlatKey extends PropertyKey = PropertyKey> = DeepReadonlyRecord<
-  PropertyKey,
-  FlatKey
->;
+export type Map<FlatKey extends PropertyKey = PropertyKey> =
+  DeepReadonlyOptionalRecord<PropertyKey, FlatKey>;
 
 export namespace Map {
   export type For<D extends Record<PropertyKey, unknown>> = {
@@ -28,11 +26,12 @@ export namespace Map {
 export type FlatKeyOf<M extends Map> = FlatKeyOfHelper<M> &
   (M extends Map<infer FlatKey> ? FlatKey : never);
 
-type FlatKeyOfHelper<M extends Map | PropertyKey> = M extends PropertyKey
-  ? M
-  : M extends Map
-    ? { [K in keyof M]: FlatKeyOfHelper<M[K]> }[keyof M]
-    : never;
+type FlatKeyOfHelper<M extends Map | PropertyKey | undefined> =
+  M extends PropertyKey
+    ? M
+    : M extends Map
+      ? { [K in keyof M]-?: FlatKeyOfHelper<M[K]> }[keyof M]
+      : never;
 
 export type ValueForFlatKey<
   M extends Map,
@@ -41,7 +40,7 @@ export type ValueForFlatKey<
 > = ValueForFlatKeyHelper<M, D, FK>;
 
 type ValueForFlatKeyHelper<
-  M extends Map | PropertyKey,
+  M extends Map | PropertyKey | undefined,
   D,
   FK extends PropertyKey,
 > = M extends FK
@@ -76,7 +75,7 @@ export declare namespace Constraint {
   > = M extends Map ? { readonly [K in keyof M]?: DeepHelper<M[K], F> } : never;
 
   type DeepHelper<
-    M extends Map | PropertyKey,
+    M extends Map | PropertyKey | undefined,
     F extends Record<PropertyKey, unknown>,
   > = M extends PropertyKey
     ? ValueOf<F, M>
@@ -173,11 +172,14 @@ export abstract class AbstractMapper<
   D extends Constraint.Deep<M> = Constraint.Deep<M>,
   F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
 > {
-  get Deep(): D {
-    throw typePropertyError();
-  }
+  // @ts-expect-error
+  readonly #private: undefined;
 
-  get Flat(): F {
+  get Variance(): {
+    Map: M;
+    Deep(x: D): never;
+    Flat(x: F): never;
+  } {
     throw typePropertyError();
   }
 
@@ -199,7 +201,7 @@ export class MapperBase<
     super();
   }
 
-  flatten<X extends Constraint.Deep<M, F>>(deep: X): Flatten<M, X> {
+  override flatten<X extends Constraint.Deep<M, F>>(deep: X): Flatten<M, X> {
     const flat: Record<PropertyKey, unknown> = {};
     const process = (map: Map, deep: Record<PropertyKey, unknown>) => {
       for (const key of getOwnKeys(map)) {
@@ -214,7 +216,7 @@ export class MapperBase<
     return flat as Flatten<M, X>;
   }
 
-  deepen<X extends Constraint.Flat<M, D>>(flat: X): Deepen<M, X> {
+  override deepen<X extends Constraint.Flat<M, D>>(flat: X): Deepen<M, X> {
     const process = (map: Map): Record<PropertyKey, unknown> => {
       const result: Record<PropertyKey, unknown> = {};
       for (const key of getOwnKeys(map)) {
@@ -267,7 +269,7 @@ export class IdentityMapper<
     return IdentityMapper.#instance as IdentityMapper<T>;
   }
 
-  flatten<
+  override flatten<
     X extends Constraint.Deep<
       IdentityMap<keyof T>,
       Constraint.Flat<
@@ -279,7 +281,7 @@ export class IdentityMapper<
     return { ...deep } as Flatten<IdentityMap<keyof T>, X>;
   }
 
-  deepen<
+  override deepen<
     X extends Constraint.Flat<
       IdentityMap<keyof T>,
       Constraint.Deep<IdentityMap<keyof T>, T>

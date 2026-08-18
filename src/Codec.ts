@@ -1,6 +1,6 @@
 import {
   getOwnKeys,
-  type DeepReadonlyRecord,
+  type DeepReadonlyOptionalRecord,
   type IsAny,
   type MutuallyAssignable,
   type Simplify,
@@ -45,13 +45,15 @@ export class Codec<T, E = T> implements Config<T, E> {
 export const makeFor = Codec.makeFor;
 export const make = Codec.make;
 
-export type AnyMap = Codec<any> | DeepReadonlyRecord<PropertyKey, Codec<any>>;
+export type AnyMap =
+  | Codec<any>
+  | DeepReadonlyOptionalRecord<PropertyKey, Codec<any>>;
 
 export declare namespace Infer {
-  type Side<S extends SideName, M extends AnyMap, X = unknown> =
+  type Side<S extends SideName, M extends AnyMap | undefined, X = unknown> =
     M extends Codec<infer T, infer E>
       ? PickSide<S, T, E>
-      : M extends DeepReadonlyRecord<PropertyKey, Codec<any>>
+      : M extends DeepReadonlyOptionalRecord<PropertyKey, Codec<any>>
         ? Simplify<
             Omit<X, keyof M> &
               (keyof X & keyof M extends infer K extends keyof X
