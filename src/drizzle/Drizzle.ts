@@ -79,16 +79,18 @@ export class Mapper<
     );
   }
 
-  flatten<X extends DeepFlat.Constraint.Deep<M, InferSelect<T>>>(deep: X) {
+  override flatten<X extends DeepFlat.Constraint.Deep<M, InferSelect<T>>>(
+    deep: X,
+  ): DeepFlat.Flatten<M, X> {
     return this.underlyingMapper.flatten(deep);
   }
 
-  deepen<
+  override deepen<
     X extends DeepFlat.Constraint.Flat<
       M,
       DeepFlat.Constraint.Deep<M, InferSelect<T>>
     >,
-  >(flat: X) {
+  >(flat: X): DeepFlat.Deepen<M, X> {
     return this.underlyingMapper.deepen(flat);
   }
 }

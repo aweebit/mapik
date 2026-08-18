@@ -84,16 +84,10 @@ export declare namespace Constraint {
       : never;
 }
 
-export type Flatten<
-  M extends Map,
-  D extends Constraint.Deep<M>,
-> = M extends unknown
-  ? D extends unknown
-    ? FlattenHelper<M, D> extends never
-      ? {}
-      : Simplify<UnionToIntersection<FlattenHelper<M, D>>>
-    : never
-  : never;
+export type Flatten<M extends Map, D extends Constraint.Deep<M>> =
+  FlattenHelper<M, D> extends never
+    ? {}
+    : Simplify<UnionToIntersection<FlattenHelper<M, D>>>;
 
 type FlattenHelper<
   M extends Map,
@@ -118,44 +112,31 @@ type FlattenHelper<
     : never;
 }[keyof M & keyof D];
 
-export type Deepen<
-  M extends Map,
-  F extends Constraint.Flat<M>,
-> = M extends unknown
-  ? F extends unknown
-    ? DeepenHelper<M, F>
-    : never
-  : never;
-
-type KeyExceptRequiredNever<T> = {
-  [K in keyof T]-?: T[K] extends never ? never : K;
-}[keyof T];
-
-type RemoveRequiredNever<T> = Pick<T, KeyExceptRequiredNever<T>>;
-
-type MapFlatKeyBack<M extends Map, FK extends PropertyKey> = {
-  [K in keyof M]: M[K] extends infer MV ? (MV extends FK ? K : never) : never;
-}[keyof M];
-
-type DeepenHelper<
-  M extends Map,
-  F extends Constraint.Flat<M>,
-  FK extends keyof F = keyof F & M[keyof M],
-> = Simplify<
-  { -readonly [K in FK as MapFlatKeyBack<M, K>]: F[K] } & PropagateRequired<
+export type Deepen<M extends Map, F extends Constraint.Flat<M>> = Simplify<
+  {
+    -readonly [K in keyof F as MapFlatKeyBack<M, K>]: ValueOf<F, K>;
+  } & PropagateRequired<
     RemoveRequiredNever<{
-      -readonly [K in keyof M]-?: K extends MapFlatKeyBack<M, FK>
-        ? never
-        : M[K] extends infer MV
+      [K in Exclude<keyof M, MapFlatKeyBack<M, keyof F>>]: M[K] extends infer MV
         ? MV extends Map
           ? F extends Constraint.Flat<MV>
-            ? DeepenHelper<MV, F>
+            ? Deepen<MV, F>
             : never
           : never
         : never;
     }>
   >
 >;
+
+type MapFlatKeyBack<M extends Map, FK extends PropertyKey> = {
+  [K in keyof M]: M[K] extends infer MV ? (MV extends FK ? K : never) : never;
+}[keyof M];
+
+type KeyExceptRequiredNever<T> = {
+  [K in keyof T]-?: T[K] extends never ? never : K;
+}[keyof T];
+
+type RemoveRequiredNever<T> = Pick<T, KeyExceptRequiredNever<T>>;
 
 export class MapperFrom<const M extends Map> {
   constructor(private readonly map: M) {}
