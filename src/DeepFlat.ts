@@ -37,7 +37,7 @@ export type ValueForFlatKey<
   M extends Map,
   D extends Constraint.Deep<M>,
   FK extends FlatKeyOf<M>,
-> = ValueForFlatKeyHelper<M, D, FK>;
+> = Constraint.Deep<M> extends D ? unknown : ValueForFlatKeyHelper<M, D, FK>;
 
 type ValueForFlatKeyHelper<
   M extends Map | PropertyKey | undefined,
@@ -144,7 +144,9 @@ type DeepenHelper<
 > = Simplify<
   { -readonly [K in FK as MapFlatKeyBack<M, K>]: F[K] } & PropagateRequired<
     RemoveRequiredNever<{
-      -readonly [K in keyof M]: M[K] extends infer MV
+      -readonly [K in keyof M]-?: K extends MapFlatKeyBack<M, FK>
+        ? never
+        : M[K] extends infer MV
         ? MV extends Map
           ? F extends Constraint.Flat<MV>
             ? DeepenHelper<MV, F>
