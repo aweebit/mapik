@@ -12,15 +12,11 @@ export type Config<T, E = T> = {
   readonly encode: (input: T) => E;
 };
 
-export class CodecFor<X> {
-  decode<T>(config: Config<T, X>) {
-    return new Codec(config);
-  }
+const codecFor = {
+  decode: <T>(config: Config<T, any>) => new Codec(config),
+  encode: <E>(config: Config<any, E>) => new Codec(config),
+} as const;
 
-  encode<E>(config: Config<X, E>) {
-    return new Codec(config);
-  }
-}
 export class Codec<T, E = T> implements Config<T, E> {
   // @ts-expect-error
   readonly #private: undefined;
@@ -33,8 +29,11 @@ export class Codec<T, E = T> implements Config<T, E> {
     this.encode = encode;
   }
 
-  static makeFor<X>() {
-    return new CodecFor<X>();
+  static makeFor<X>(): {
+    readonly decode: <T>(config: Config<T, X>) => Codec<T, X>;
+    readonly encode: <E>(config: Config<X, E>) => Codec<X, E>;
+  } {
+    return codecFor;
   }
 
   static make<T, E = T>(config: Config<T, E>) {
@@ -48,6 +47,41 @@ export const make = Codec.make;
 export type AnyMap =
   | Codec<any>
   | DeepReadonlyOptionalRecord<PropertyKey, Codec<any>>;
+
+export type Map<T, E = T> = Codec<T, E> | MapInnerNode<T, E>;
+
+export type MapInnerNode<T, E = T> = T | E extends object
+  ? (() => never) extends T | E
+    ? never
+    : MutuallyAssignable<keyof T, keyof E> extends true
+      ? MapInnerNodeHelper<T, E>
+      : never
+  : never;
+
+type MapInnerNodeHelper<
+  T,
+  E,
+  K extends keyof T & keyof E = keyof T & keyof E,
+  Partition extends { required: K; optional: K } = K extends unknown
+    ? MutuallyAssignable<ValueOf<T, K>, ValueOf<E, K>> extends true
+      ? { required: never; optional: K }
+      : { required: K; optional: never }
+    : never,
+> = Simplify<
+  {
+    readonly [P in Partition["required"]]: Map<ValueOf<T, P>, ValueOf<E, P>>;
+  } & {
+    readonly [P in Partition["optional"]]?: Map<ValueOf<T, P>, ValueOf<E, P>>;
+  }
+>;
+
+export type SideName = "Type" | "Encoded";
+
+type PickSide<S extends SideName, T, E> = S extends "Type"
+  ? T
+  : S extends "Encoded"
+    ? E
+    : never;
 
 export declare namespace Infer {
   type Side<S extends SideName, M extends AnyMap | undefined, X = unknown> =
@@ -69,41 +103,6 @@ export declare namespace Infer {
 
   export type Encoded<M extends AnyMap, T = unknown> = Side<"Encoded", M, T>;
 }
-
-export type Map<T, E = T> = Codec<T, E> | MapInnerNode<T, E>;
-
-export type MapInnerNode<T, E = T> = T | E extends object
-  ? (() => never) extends T | E
-    ? never
-    : MutuallyAssignable<keyof T, keyof E> extends true
-      ? MapInnerNodeHelper<T, E>
-      : never
-  : never;
-
-type MapInnerNodeHelper<
-  T,
-  E,
-  K extends keyof T & keyof E = keyof T & keyof E,
-  Partition extends { required: K; optional: K } = K extends unknown
-    ? MutuallyAssignable<ValueOf<T, K>, ValueOf<E, K>> extends true
-      ? { optional: K; required: never }
-      : { optional: never; required: K }
-    : never,
-> = Simplify<
-  {
-    readonly [P in Partition["required"]]: Map<ValueOf<T, P>, ValueOf<E, P>>;
-  } & {
-    readonly [P in Partition["optional"]]?: Map<ValueOf<T, P>, ValueOf<E, P>>;
-  }
->;
-
-export type SideName = "Type" | "Encoded";
-
-type PickSide<S extends SideName, T, E> = S extends "Type"
-  ? T
-  : S extends "Encoded"
-    ? E
-    : never;
 
 export declare namespace Constraint {
   export type Side<S extends SideName, T, E, M extends Map<T, E>> =
@@ -186,25 +185,27 @@ export type Encode<
   E = Infer.Encoded<M>,
 > = Apply<"Type", T, E, M, X>;
 
-export class MapperFor<X> {
-  decode<const M extends Map<T, X>, T = Infer.Type<M, X>>(map: M) {
-    return new Mapper<M, T, X>(map);
-  }
-
-  encode<const M extends Map<X, E>, E = Infer.Encoded<M, X>>(map: M) {
-    return new Mapper<M, X, E>(map);
-  }
-}
+const mapperFor = {
+  decode: (map: any) => new Mapper(map),
+  encode: (map: any) => new Mapper(map),
+} as const;
 
 export class Mapper<
   const M extends Map<T, E> = any,
   T = IsAny<M> extends true ? any : Infer.Type<M>,
   E = IsAny<M> extends true ? any : Infer.Encoded<M>,
 > {
-  constructor(protected readonly map: M) {}
+  constructor(readonly map: M) {}
 
-  static makeFor<X>() {
-    return new MapperFor<X>();
+  static makeFor<X>(): {
+    readonly decode: <const M extends Map<T, X>, T = Infer.Type<M, X>>(
+      map: M,
+    ) => Mapper<M, T, X>;
+    readonly encode: <const M extends Map<X, E>, E = Infer.Encoded<M, X>>(
+      map: M,
+    ) => Mapper<M, X, E>;
+  } {
+    return mapperFor;
   }
 
   static make<

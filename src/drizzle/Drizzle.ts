@@ -25,38 +25,29 @@ export const identityMap = <T extends Table | View>(
   );
 };
 
-export type InferSelect<T extends Table | View> = keyof (T extends Table
+export type InferSelect<T extends Table | View> = T extends Table
   ? InferSelectModel<T>
   : T extends View
     ? InferSelectViewModel<T>
-    : never);
+    : never;
 
 export class Mapper<
   T extends Table | View = Table | View,
   M extends DeepFlat.Map<keyof IdentityMap<T>> = DeepFlat.Map<
     keyof IdentityMap<T>
   >,
-> extends DeepFlat.AbstractMapper<
-  M,
-  DeepFlat.Constraint.Deep<M, InferSelect<T>>,
-  // @ts-expect-error
-  InferSelect<// no @ts-expect-error here
-  T>
-> {
+> extends DeepFlat.AbstractMapper<M, InferSelect<T>> {
   constructor(
     readonly source: T,
     protected readonly underlyingMapper: DeepFlat.AbstractMapper<
       M,
-      DeepFlat.Constraint.Deep<M, InferSelect<T>>,
-      // @ts-expect-error
-      InferSelect<// no @ts-expect-error here
-      T>
+      InferSelect<T>
     >,
   ) {
     super();
   }
 
-  static make<T extends Table | View>(source: T): Mapper<T>;
+  static make<T extends Table | View>(source: T): Mapper<T, IdentityMap<T>>;
   static make<
     T extends Table | View,
     const M extends DeepFlat.Map<keyof IdentityMap<T>>,
@@ -67,29 +58,29 @@ export class Mapper<
   >(source: T, map: M): Mapper<T, M>;
   static make<
     T extends Table | View,
-    const M extends DeepFlat.Map<keyof IdentityMap<T>>,
+    M extends DeepFlat.Map<keyof IdentityMap<T>>,
   >(source: T, map?: M | ((identityMap: IdentityMap<T>) => M)) {
     return new Mapper<T, M>(
       source,
       map === undefined
-        ? (DeepFlat.IdentityMapper.for() as any)
+        ? (DeepFlat.IdentityMapper.for() as unknown as DeepFlat.AbstractMapper<
+            M,
+            InferSelect<T>
+          >)
         : new DeepFlat.Mapper(
             typeof map === "function" ? map(identityMap(source)) : map,
           ),
     );
   }
 
-  override flatten<X extends DeepFlat.Constraint.Deep<M, InferSelect<T>>>(
-    deep: X,
-  ): DeepFlat.Flatten<M, X> {
+  override flatten<
+    X extends DeepFlat.Constraint.DeepFromFlat<M, InferSelect<T>>,
+  >(deep: X): DeepFlat.Flatten<M, X> {
     return this.underlyingMapper.flatten(deep);
   }
 
   override deepen<
-    X extends DeepFlat.Constraint.Flat<
-      M,
-      DeepFlat.Constraint.Deep<M, InferSelect<T>>
-    >,
+    X extends DeepFlat.Constraint.FlatFromFlat<M, InferSelect<T>>,
   >(flat: X): DeepFlat.Deepen<M, X> {
     return this.underlyingMapper.deepen(flat);
   }

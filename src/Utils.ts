@@ -1,8 +1,9 @@
 import type {
-  DeepSimplify,
+  DeepRecord,
   PropagateRequired,
-  UnionToIntersection,
+  Simplify,
   ValueOf,
+  Writable,
 } from "./utils/index.js";
 
 export type IdentityMap<K extends PropertyKey> = { [P in K]: P } & {};
@@ -18,33 +19,27 @@ export const identityMap = <const Ks extends readonly PropertyKey[]>(
 export type DeepenAtDelimiter<
   D extends string,
   T extends Record<string, unknown>,
-> = DeepSimplify<
-  // ^ FIXME (causes issues with Date)
-  {
-    -readonly [K in keyof T as K extends `${string}${D}${string}`
-      ? never
-      : K]: T[K];
-  } & PropagateRequired<{
-    [K in keyof T as K extends `${infer A}${D}${string}`
-      ? A
-      : never]: UnionToIntersection<
-      K extends `${string}${D}${infer B}`
-        ? DeepenAtDelimiterHelper<Pick<T, K>, D, B, ValueOf<T, K>>
-        : never
-    > extends infer Result extends Record<string, unknown>
-      ? Result
-      : never;
-  }>
->;
-
-type DeepenAtDelimiterHelper<
-  T extends Record<string, unknown>,
-  D extends string,
-  K extends string,
-  V,
-> = K extends `${infer A}${D}${infer B}`
-  ? PropagateRequired<{ [P in A]: DeepenAtDelimiterHelper<T, D, B, V> }>
-  : { -readonly [P in keyof T as K]: V };
+> = T extends unknown
+  ? string extends keyof T
+    ? DeepRecord<string, ValueOf<T>>
+    : Simplify<
+        Writable<T, Exclude<keyof T, `${string}${D}${string}`>> &
+          PropagateRequired<{
+            -readonly [K in keyof T as K extends `${infer A}${D}${string}`
+              ? Exclude<A, keyof T>
+              : never]: K extends `${infer A}${D}${string}`
+              ? DeepenAtDelimiter<
+                  D,
+                  {
+                    [K in keyof T as K extends `${A}${D}${infer B}`
+                      ? B
+                      : never]: T[K];
+                  }
+                >
+              : never;
+          }>
+      >
+  : never;
 
 export type ValidateDeepenAtDelimiterInput<
   D extends string,
@@ -71,7 +66,7 @@ export const createDeepenAtDelimiter = <D extends string>(
   delimiter: D,
 ): CreateDeepenAtDelimiter<D> => {
   return <T extends Record<string, unknown>>(
-    flat: T,
+    flat: ValidateDeepenAtDelimiterInput<D, T>,
   ): DeepenAtDelimiter<D, T> => {
     const deep: Record<string, unknown> = {};
     Object.entries(flat).forEach(([key, value]) => {

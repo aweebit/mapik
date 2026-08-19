@@ -3,10 +3,9 @@ import {
   getOwnKeys,
   typePropertyError,
   type DeepReadonlyOptionalRecord,
-  type OptionalKeyOf,
+  type HasRequiredKeys,
   type PropagateRequired,
   type Simplify,
-  type UnionToIntersection,
   type ValueOf,
 } from "./utils/index.js";
 
@@ -23,110 +22,128 @@ export namespace Map {
   };
 }
 
-export type FlatKeyOf<M extends Map> = FlatKeyOfHelper<M> &
-  (M extends Map<infer FlatKey> ? FlatKey : never);
-
-type FlatKeyOfHelper<M extends Map | PropertyKey | undefined> =
-  M extends PropertyKey
-    ? M
-    : M extends Map
-      ? { [K in keyof M]-?: FlatKeyOfHelper<M[K]> }[keyof M]
-      : never;
-
-export type ValueForFlatKey<
+export type FlatKeyOf<
   M extends Map,
-  D extends Constraint.Deep<M>,
-  FK extends FlatKeyOf<M>,
-> = Constraint.Deep<M> extends D ? unknown : ValueForFlatKeyHelper<M, D, FK>;
-
-type ValueForFlatKeyHelper<
-  M extends Map | PropertyKey | undefined,
-  D,
-  FK extends PropertyKey,
-> = M extends FK
-  ? D
-  : M extends Map
-    ? D extends unknown // object? Record<PropertyKey, unknown>?
-      ? {
-          [K in keyof M & keyof D]: ValueForFlatKeyHelper<
-            M[K],
-            ValueOf<D, K>,
-            FK
-          >;
-        }[keyof M & keyof D]
-      : never
-    : never;
-
-export declare namespace Constraint {
-  export type Flat<M extends Map, D extends Deep<M> = Deep<M>> = Simplify<{
-    readonly [K in FlatKeyOf<M>]?: ValueForFlatKey<
-      M,
-      // Without & Deep<M>, fields not present in D end up having the never type
-      D & Deep<M>,
-      K
-    >;
-  }>;
-
-  export type Deep<
-    M extends Map,
-    F extends { readonly [K in FlatKeyOf<M>]?: unknown } = {
-      readonly [K in FlatKeyOf<M>]?: unknown;
-    },
-  > = M extends Map ? { readonly [K in keyof M]?: DeepHelper<M[K], F> } : never;
-
-  type DeepHelper<
-    M extends Map | PropertyKey | undefined,
-    F extends Record<PropertyKey, unknown>,
-  > = M extends PropertyKey
-    ? ValueOf<F, M>
-    : M extends Map
-      ? Deep<M, F>
-      : never;
-}
-
-export type Flatten<M extends Map, D extends Constraint.Deep<M>> =
-  FlattenHelper<M, D> extends never
-    ? {}
-    : Simplify<UnionToIntersection<FlattenHelper<M, D>>>;
-
-type FlattenHelper<
-  M extends Map,
-  D extends Constraint.Deep<M>,
-  O extends boolean = false, // inherited optionality
+  D extends Constraint.Deep<M> = Constraint.Deep<M>,
 > = {
-  [K in keyof M & keyof D]: [
-    M[K],
-    ValueOf<D, K>, // somehow undefined doesn't mess things up
-    // even without ValueOf ¯\_(ツ)_/¯ But we choose to not rely on that.
-    K extends OptionalKeyOf<D, K> ? true : false,
-  ] extends [infer MV, infer DV, infer KO extends boolean]
+  [K in keyof M & keyof D]: M[K] extends infer MV
     ? MV extends PropertyKey
-      ? true extends O | KO
-        ? { [P in MV]?: DV }
-        : { [P in MV]: DV }
+      ? MV
       : MV extends Map
-        ? DV extends Constraint.Deep<MV>
-          ? FlattenHelper<MV, DV, O | KO>
+        ? ValueOf<D, K> extends infer DV
+          ? DV extends Constraint.Deep<MV>
+            ? FlatKeyOf<MV, DV>
+            : never
           : never
         : never
     : never;
 }[keyof M & keyof D];
 
-export type Deepen<M extends Map, F extends Constraint.Flat<M>> = Simplify<
-  {
-    -readonly [K in keyof F as MapFlatKeyBack<M, K>]: ValueOf<F, K>;
-  } & PropagateRequired<
-    RemoveRequiredNever<{
-      [K in Exclude<keyof M, MapFlatKeyBack<M, keyof F>>]: M[K] extends infer MV
-        ? MV extends Map
-          ? F extends Constraint.Flat<MV>
-            ? Deepen<MV, F>
+export declare namespace Constraint {
+  export type Flat<M extends Map> = { readonly [K in FlatKeyOf<M>]?: unknown };
+
+  export type FlatFromFlat<M extends Map, F extends Flat<M>> = {
+    readonly [K in keyof F]?: F[K];
+  } & {};
+
+  export type FlatFromDeep<M extends Map, D extends Deep<M>> = FlatFromFlat<
+    M,
+    Flatten<M, D>
+  >;
+
+  export type Deep<M extends Map> = {
+    readonly [K in keyof M]?: M[K] extends infer MV
+      ? MV extends PropertyKey
+        ? unknown
+        : MV extends Map
+          ? Deep<MV>
+          : never
+      : never;
+  };
+
+  export type DeepFromFlat<M extends Map, F extends Flat<M> = Flat<M>> = {
+    readonly [K in keyof M]?: M[K] extends infer MV
+      ? MV extends PropertyKey
+        ? ValueOf<F, MV & keyof F>
+        : MV extends Map
+          ? DeepFromFlat<MV, F>
+          : never
+      : never;
+  };
+}
+
+export type Flatten<
+  M extends Map,
+  D extends Constraint.Deep<M>,
+  FK extends FlatKeyOf<M, D> = FlatKeyOf<M, D>,
+> = Map extends M
+  ? Record<PropertyKey, unknown>
+  : {
+        [K in FK]: FlattenHelperRecur<M, D, K>;
+      } extends infer T extends Record<
+        FK,
+        [unknown, { required: FK; optional: FK }]
+      >
+    ? Simplify<
+        FlattenHelperPick<T, T[FK][1]["required"]> &
+          Partial<FlattenHelperPick<T, T[FK][1]["optional"]>>
+      >
+    : never;
+
+type FlattenHelperPick<
+  T extends Record<PropertyKey, [unknown, unknown]>,
+  K extends keyof T,
+> = { [P in K]: T[P][0] };
+
+type FlattenHelperRecur<
+  M extends Map,
+  D extends Constraint.Deep<M>,
+  FK extends PropertyKey = FlatKeyOf<M, D>,
+  O extends boolean = false, // inherited optionality
+> = {
+  [K in keyof M & keyof D]: M[K] extends infer MV
+    ? MV extends FK
+      ? [
+          ValueOf<D, K>,
+          FlattenHelperOptionality<D, K, O> extends true
+            ? { required: never; optional: MV }
+            : { required: MV; optional: never },
+        ]
+      : MV extends Map
+        ? ValueOf<D, K> extends infer DV
+          ? DV extends Constraint.Deep<MV>
+            ? FlattenHelperRecur<MV, DV, FK, FlattenHelperOptionality<D, K, O>>
             : never
           : never
-        : never;
-    }>
-  >
->;
+        : never
+    : never;
+}[keyof M & keyof D];
+
+type FlattenHelperOptionality<
+  D,
+  K extends keyof D,
+  O extends boolean,
+> = O extends true ? O : HasRequiredKeys<Pick<D, K>> extends true ? O : true;
+
+export type Deepen<M extends Map, F extends Constraint.Flat<M>> = Map extends M
+  ? Record<PropertyKey, unknown>
+  : Simplify<
+      {
+        -readonly [K in keyof F as MapFlatKeyBack<M, K>]: ValueOf<F, K>;
+      } & PropagateRequired<
+        RemoveRequiredNever<{
+          -readonly [K in keyof M]-?: K extends MapFlatKeyBack<M, keyof F>
+            ? never
+            : M[K] extends infer MV
+              ? MV extends Map
+                ? F extends Constraint.Flat<MV>
+                  ? Deepen<MV, F>
+                  : never
+                : never
+              : never;
+        }>
+      >
+    >;
 
 type MapFlatKeyBack<M extends Map, FK extends PropertyKey> = {
   [K in keyof M]: M[K] extends infer MV ? (MV extends FK ? K : never) : never;
@@ -138,29 +155,15 @@ type KeyExceptRequiredNever<T> = {
 
 type RemoveRequiredNever<T> = Pick<T, KeyExceptRequiredNever<T>>;
 
-export class MapperFrom<const M extends Map> {
-  constructor(private readonly map: M) {}
-
-  flatten<D extends Constraint.Deep<M>>() {
-    return new Mapper<M, D>(this.map);
-  }
-
-  deepen<F extends Constraint.Flat<M, Constraint.Deep<M, F>>>() {
-    return new Mapper<M, Constraint.Deep<M, F>, F>(this.map);
-  }
-}
-
 export abstract class AbstractMapper<
   M extends Map = Map,
-  D extends Constraint.Deep<M> = Constraint.Deep<M>,
-  F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
+  F extends Constraint.Flat<M> = Constraint.Flat<M>,
 > {
   // @ts-expect-error
   readonly #private: undefined;
 
   get Variance(): {
     Map: M;
-    Deep(x: D): never;
     Flat(x: F): never;
   } {
     throw typePropertyError();
@@ -171,20 +174,25 @@ export abstract class AbstractMapper<
     this.deepen = this.deepen.bind(this);
   }
 
-  abstract flatten<X extends Constraint.Deep<M, F>>(deep: X): Flatten<M, X>;
-  abstract deepen<X extends Constraint.Flat<M, D>>(flat: X): Deepen<M, X>;
+  abstract flatten<X extends Constraint.DeepFromFlat<M, F>>(
+    deep: X,
+  ): Flatten<M, X>;
+  abstract deepen<X extends Constraint.FlatFromFlat<M, F>>(
+    flat: X,
+  ): Deepen<M, X>;
 }
 
 export class MapperBase<
   const M extends Map = Map,
-  D extends Constraint.Deep<M> = Constraint.Deep<M>,
-  F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
-> extends AbstractMapper<M, D, F> {
+  F extends Constraint.Flat<M> = Constraint.Flat<M>,
+> extends AbstractMapper<M, F> {
   constructor(readonly map: M) {
     super();
   }
 
-  override flatten<X extends Constraint.Deep<M, F>>(deep: X): Flatten<M, X> {
+  override flatten<X extends Constraint.DeepFromFlat<M, F>>(
+    deep: X,
+  ): Flatten<M, X> {
     const flat: Record<PropertyKey, unknown> = {};
     const process = (map: Map, deep: Record<PropertyKey, unknown>) => {
       for (const key of getOwnKeys(map)) {
@@ -199,7 +207,9 @@ export class MapperBase<
     return flat as Flatten<M, X>;
   }
 
-  override deepen<X extends Constraint.Flat<M, D>>(flat: X): Deepen<M, X> {
+  override deepen<X extends Constraint.FlatFromFlat<M, F>>(
+    flat: X,
+  ): Deepen<M, X> {
     const process = (map: Map): Record<PropertyKey, unknown> => {
       const result: Record<PropertyKey, unknown> = {};
       for (const key of getOwnKeys(map)) {
@@ -216,31 +226,45 @@ export class MapperBase<
     return process(this.map) as Deepen<M, X>;
   }
 }
+class MapperFrom<const M extends Map> {
+  constructor(private readonly map: M) {}
+
+  flatten<D extends Constraint.Deep<M>>() {
+    return new Mapper<M, Constraint.FlatFromDeep<M, D>>(this.map);
+  }
+
+  deepen<F extends Constraint.Flat<M>>() {
+    return new Mapper<M, F>(this.map);
+  }
+}
 
 export class Mapper<
   const M extends Map = Map,
-  D extends Constraint.Deep<M> = Constraint.Deep<M>,
-  F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
-> extends MapperBase<M, D, F> {
-  static makeFrom<const M extends Map>(map: M) {
+  F extends Constraint.Flat<M> = Constraint.Flat<M>,
+> extends MapperBase<M, F> {
+  static makeFrom<const M extends Map>(
+    map: M,
+  ): {
+    flatten: <D extends Constraint.Deep<M>>() => Mapper<
+      M,
+      Constraint.FlatFromDeep<M, D>
+    >;
+    deepen: <F extends Constraint.Flat<M>>() => Mapper<M, F>;
+  } {
     return new MapperFrom(map);
   }
 
   static make<
     const M extends Map,
-    D extends Constraint.Deep<M> = Constraint.Deep<M>,
-    F extends Constraint.Flat<M, D> = Constraint.Flat<M, D>,
+    F extends Constraint.Flat<M> = Constraint.Flat<M>,
   >(map: M) {
-    return new Mapper<M, D, F>(map);
+    return new Mapper<M, F>(map);
   }
 }
 
 export class IdentityMapper<
   T extends Record<PropertyKey, unknown> = Record<PropertyKey, unknown>,
-> extends AbstractMapper<
-  IdentityMap<keyof T>,
-  Constraint.Deep<IdentityMap<keyof T>, T>
-> {
+> extends AbstractMapper<IdentityMap<keyof T>, T> {
   static #instance?: IdentityMapper;
 
   protected constructor() {
@@ -252,24 +276,15 @@ export class IdentityMapper<
     return IdentityMapper.#instance as IdentityMapper<T>;
   }
 
-  override flatten<
-    X extends Constraint.Deep<
-      IdentityMap<keyof T>,
-      Constraint.Flat<
-        IdentityMap<keyof T>,
-        Constraint.Deep<IdentityMap<keyof T>, T>
-      >
-    >,
-  >(deep: X) {
+  override flatten<X extends Constraint.DeepFromFlat<IdentityMap<keyof T>, T>>(
+    deep: X,
+  ) {
     return { ...deep } as Flatten<IdentityMap<keyof T>, X>;
   }
 
-  override deepen<
-    X extends Constraint.Flat<
-      IdentityMap<keyof T>,
-      Constraint.Deep<IdentityMap<keyof T>, T>
-    >,
-  >(flat: X) {
+  override deepen<X extends Constraint.FlatFromFlat<IdentityMap<keyof T>, T>>(
+    flat: X,
+  ) {
     return { ...flat } as Deepen<IdentityMap<keyof T>, X>;
   }
 }

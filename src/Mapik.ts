@@ -6,11 +6,12 @@ export class MapikBase<
   DFM extends DeepFlat.Map = DeepFlat.Map,
   T = IsAny<CM> extends true ? any : Codec.Infer.Type<CM>,
   D extends DeepFlat.Constraint.Deep<DFM> = DeepFlat.Constraint.Deep<DFM>,
-  F extends DeepFlat.Constraint.Flat<DFM, D> = DeepFlat.Constraint.Flat<DFM, D>,
+  F extends DeepFlat.Constraint.FlatFromDeep<DFM, D> =
+    DeepFlat.Constraint.FlatFromDeep<DFM, D>,
 > {
   constructor(
     readonly codecMapper: Codec.Mapper<CM, T, IsAny<CM> extends true ? any : D>,
-    readonly deepFlatMapper: DeepFlat.AbstractMapper<DFM, D, F>,
+    readonly deepFlatMapper: DeepFlat.AbstractMapper<DFM, F>,
   ) {
     this.encode = this.encode.bind(this);
     this.decode = this.decode.bind(this);
@@ -18,21 +19,11 @@ export class MapikBase<
 
   encode<X extends Codec.Constraint.Type<CM, T, D>>(
     input: X,
-  ): DeepFlat.Flatten<
-    DFM,
-    // @ts-expect-error
-    Codec.Encode<
-      // no @ts-expect-error here
-      CM,
-      X,
-      T,
-      D
-    >
-  > {
-    return this.deepFlatMapper.flatten(this.codecMapper.encode(input) as any);
+  ): DeepFlat.Flatten<DFM, Codec.Encode<CM, X, T, D>> {
+    return this.deepFlatMapper.flatten(this.codecMapper.encode(input));
   }
 
-  decode<X extends DeepFlat.Constraint.Flat<DFM, D>>(
+  decode<X extends DeepFlat.Constraint.FlatFromFlat<DFM, F>>(
     input: DeepFlat.Deepen<DFM, X> extends Codec.Constraint.Encoded<CM, T, D>
       ? X
       : never,
@@ -54,7 +45,8 @@ export class Mapik<
   DFM extends DeepFlat.Map = DeepFlat.Map,
   T = IsAny<CM> extends true ? any : Codec.Infer.Type<CM>,
   D extends DeepFlat.Constraint.Deep<DFM> = DeepFlat.Constraint.Deep<DFM>,
-  F extends DeepFlat.Constraint.Flat<DFM, D> = DeepFlat.Constraint.Flat<DFM, D>,
+  F extends DeepFlat.Constraint.FlatFromDeep<DFM, D> =
+    DeepFlat.Constraint.FlatFromDeep<DFM, D>,
 > extends MapikBase<CM, DFM, T, D, F> {
   static makeFor<X>() {
     return new MapikFor<X>();
@@ -63,14 +55,12 @@ export class Mapik<
   static makeFrom<const DFM extends DeepFlat.Map>(map: DFM): MapikFrom<DFM>;
   static makeFrom<
     DFM extends DeepFlat.Map,
-    D extends DeepFlat.Constraint.Deep<DFM, F>,
-    F extends DeepFlat.Constraint.Flat<DFM, D>,
-  >(mapper: DeepFlat.AbstractMapper<DFM, D, F>): MapikFrom2<DFM, D, F>;
+    F extends DeepFlat.Constraint.Flat<DFM>,
+  >(mapper: DeepFlat.AbstractMapper<DFM, F>): MapikFrom2<DFM, F>;
   static makeFrom<
     const DFM extends DeepFlat.Map,
-    D extends DeepFlat.Constraint.Deep<DFM, F>,
-    F extends DeepFlat.Constraint.Flat<DFM, D>,
-  >(mapOrMapper: DFM | DeepFlat.AbstractMapper<DFM, D, F>) {
+    F extends DeepFlat.Constraint.Flat<DFM>,
+  >(mapOrMapper: DFM | DeepFlat.AbstractMapper<DFM, F>) {
     return mapOrMapper instanceof DeepFlat.AbstractMapper
       ? new MapikFrom2(mapOrMapper)
       : new MapikFrom<DFM>(new DeepFlat.Mapper<DFM>(mapOrMapper));
@@ -81,13 +71,11 @@ export class Mapik<
     DFM extends DeepFlat.Map,
     T = IsAny<CM> extends true ? any : Codec.Infer.Type<CM>,
     D extends DeepFlat.Constraint.Deep<DFM> = DeepFlat.Constraint.Deep<DFM>,
-    F extends DeepFlat.Constraint.Flat<DFM, D> = DeepFlat.Constraint.Flat<
-      DFM,
-      D
-    >,
+    F extends DeepFlat.Constraint.FlatFromDeep<DFM, D> =
+      DeepFlat.Constraint.FlatFromDeep<DFM, D>,
   >(
     codecMapper: Codec.Mapper<CM, T, IsAny<CM> extends true ? any : D>,
-    deepFlatMapper: DeepFlat.AbstractMapper<DFM, D, F>,
+    deepFlatMapper: DeepFlat.AbstractMapper<DFM, F>,
   ) {
     return new Mapik<CM, DFM, T, D, F>(codecMapper, deepFlatMapper);
   }
@@ -143,22 +131,13 @@ export class MapikFor2<
   >;
   flatten<
     DFM extends DeepFlat.Map.For<D>,
-    F extends DeepFlat.Constraint.Flat<
-      DFM,
-      // @ts-expect-error
-      D
-    > = DeepFlat.Constraint.Flat<
+    F extends DeepFlat.Constraint.FlatFromDeep<
       DFM,
       // @ts-expect-error
       D
     >,
   >(
-    mapper: DeepFlat.AbstractMapper<
-      DFM,
-      // @ts-expect-error
-      D,
-      F
-    >,
+    mapper: DeepFlat.AbstractMapper<DFM, F>,
   ): Mapik<
     CM,
     DFM,
@@ -167,15 +146,14 @@ export class MapikFor2<
     D,
     F
   >;
-  flatten<DFM extends DeepFlat.Map.For<D>>(
-    mapOrMapper:
-      | DFM
-      | DeepFlat.AbstractMapper<
-          DFM,
-          // @ts-expect-error
-          D
-        >,
-  ) {
+  flatten<
+    DFM extends DeepFlat.Map.For<D>,
+    F extends DeepFlat.Constraint.FlatFromDeep<
+      DFM,
+      // @ts-expect-error
+      D
+    >,
+  >(mapOrMapper: DFM | DeepFlat.AbstractMapper<DFM, F>) {
     const deepFlatMapper =
       mapOrMapper instanceof DeepFlat.AbstractMapper
         ? mapOrMapper
@@ -186,11 +164,7 @@ export class MapikFor2<
       T,
       // @ts-expect-error
       D,
-      DeepFlat.Constraint.Flat<
-        DFM,
-        // @ts-expect-error
-        D
-      >
+      F
     >(this.codecMapper, deepFlatMapper);
   }
 }
@@ -198,40 +172,46 @@ export class MapikFor2<
 export class MapikFrom<const M extends DeepFlat.Map> {
   constructor(private readonly mapper: DeepFlat.AbstractMapper<M>) {}
 
-  flatten<
-    D extends DeepFlat.Constraint.Deep<M, DeepFlat.Constraint.Flat<M, D>>,
-  >() {
-    return new MapikFrom2<M, D, DeepFlat.Constraint.Flat<M, D>>(
-      this.mapper as DeepFlat.AbstractMapper<M, D>,
+  flatten<D extends DeepFlat.Constraint.Deep<M>>() {
+    return new MapikFrom2<M, DeepFlat.Constraint.FlatFromDeep<M, D>>(
+      this.mapper,
     );
   }
 
-  deepen<
-    F extends DeepFlat.Constraint.Flat<M, DeepFlat.Constraint.Deep<M, F>>,
-  >() {
-    return new MapikFrom2<M, DeepFlat.Constraint.Deep<M, F>, F>(
-      this.mapper as DeepFlat.AbstractMapper<
-        M,
-        DeepFlat.Constraint.Deep<M, F>,
-        F
-      >,
-    );
+  deepen<F extends DeepFlat.Constraint.Flat<M>>() {
+    return new MapikFrom2<M, F>(this.mapper);
   }
 }
 
 export class MapikFrom2<
   DFM extends DeepFlat.Map,
-  D extends DeepFlat.Constraint.Deep<DFM, F>,
-  F extends DeepFlat.Constraint.Flat<DFM, D>,
+  F extends DeepFlat.Constraint.Flat<DFM>,
 > {
   constructor(
-    private readonly deepFlatMapper: DeepFlat.AbstractMapper<DFM, D, F>,
+    private readonly deepFlatMapper: DeepFlat.AbstractMapper<DFM, F>,
   ) {}
 
-  decode<const CM extends Codec.Map<T, D>, T = Codec.Infer.Type<CM, D>>(
+  decode<
+    const CM extends Codec.Map<T, DeepFlat.Deepen<DFM, F>>,
+    T = Codec.Infer.Type<CM, DeepFlat.Deepen<DFM, F>>,
+  >(
     map: CM,
-  ) {
-    const codecMapper = new Codec.Mapper<CM, T, D>(map);
-    return new Mapik<CM, DFM, T, D, F>(codecMapper, this.deepFlatMapper);
+  ): Mapik<
+    CM,
+    DFM,
+    T,
+    DeepFlat.Deepen<DFM, F>,
+    // @ts-expect-error
+    F
+  > {
+    const codecMapper = new Codec.Mapper<CM, T, DeepFlat.Deepen<DFM, F>>(map);
+    return new Mapik<
+      CM,
+      DFM,
+      T,
+      DeepFlat.Deepen<DFM, F>,
+      // @ts-expect-error
+      F
+    >(codecMapper, this.deepFlatMapper);
   }
 }
