@@ -15,10 +15,6 @@ export type DeepRecord<K extends PropertyKey, T> = {
   [P in K]: T | DeepRecord<K, T>;
 };
 
-export type DeepReadonlyOptionalRecord<K extends PropertyKey, T> = {
-  readonly [P in K]?: T | DeepReadonlyOptionalRecord<K, T>;
-};
-
 export type HasRequiredKeys<T> = Partial<T> extends T ? false : true;
 
 export type PropagateRequired<

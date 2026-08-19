@@ -120,7 +120,7 @@ export class MapikFor2<
 > {
   constructor(private readonly codecMapper: Codec.Mapper<CM, T, D>) {}
 
-  flatten<const DFM extends DeepFlat.Map.For<D>>(
+  flatten<const DFM extends DeepFlat.Map<PropertyKey, D>>(
     map: DFM,
   ): Mapik<
     CM,
@@ -130,7 +130,7 @@ export class MapikFor2<
     D
   >;
   flatten<
-    DFM extends DeepFlat.Map.For<D>,
+    DFM extends DeepFlat.Map<PropertyKey, D>,
     F extends DeepFlat.Constraint.FlatFromDeep<
       DFM,
       // @ts-expect-error
@@ -147,7 +147,7 @@ export class MapikFor2<
     F
   >;
   flatten<
-    DFM extends DeepFlat.Map.For<D>,
+    DFM extends DeepFlat.Map<PropertyKey, D>,
     F extends DeepFlat.Constraint.FlatFromDeep<
       DFM,
       // @ts-expect-error

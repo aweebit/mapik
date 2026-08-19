@@ -1,6 +1,6 @@
 import {
   getOwnKeys,
-  type DeepReadonlyOptionalRecord,
+  type DeepRecord,
   type IsAny,
   type MutuallyAssignable,
   type Simplify,
@@ -44,9 +44,7 @@ export class Codec<T, E = T> implements Config<T, E> {
 export const makeFor = Codec.makeFor;
 export const make = Codec.make;
 
-export type AnyMap =
-  | Codec<any>
-  | DeepReadonlyOptionalRecord<PropertyKey, Codec<any>>;
+export type AnyMap = Codec<any> | DeepRecord<PropertyKey, Codec<any>>;
 
 export type Map<T, E = T> = Codec<T, E> | MapInnerNode<T, E>;
 
@@ -84,17 +82,17 @@ type PickSide<S extends SideName, T, E> = S extends "Type"
     : never;
 
 export declare namespace Infer {
-  type Side<S extends SideName, M extends AnyMap | undefined, X = unknown> =
+  type Side<S extends SideName, M extends AnyMap, X = unknown> =
     M extends Codec<infer T, infer E>
       ? PickSide<S, T, E>
-      : M extends DeepReadonlyOptionalRecord<PropertyKey, Codec<any>>
+      : M extends DeepRecord<PropertyKey, Codec<any>>
         ? Simplify<
             Omit<X, keyof M> &
               (keyof X & keyof M extends infer K extends keyof X
-                ? { [P in K]: Side<S, ValueOf<M, K>, ValueOf<X, K>> }
+                ? { [P in K]: Side<S, M[K], ValueOf<X, K>> }
                 : never) &
               (Exclude<keyof M, keyof X> extends infer K extends PropertyKey
-                ? { readonly [P in K]?: Side<S, ValueOf<M, K>> }
+                ? { readonly [P in K]?: Side<S, M[K]> }
                 : never)
           >
         : never;

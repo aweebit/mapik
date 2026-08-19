@@ -2,25 +2,16 @@ import { type IdentityMap } from "./Utils.js";
 import {
   getOwnKeys,
   typePropertyError,
-  type DeepReadonlyOptionalRecord,
   type HasRequiredKeys,
   type PropagateRequired,
   type Simplify,
   type ValueOf,
 } from "./utils/index.js";
 
-export type Map<FlatKey extends PropertyKey = PropertyKey> =
-  DeepReadonlyOptionalRecord<PropertyKey, FlatKey>;
-
-export namespace Map {
-  export type For<D extends Record<PropertyKey, unknown>> = {
-    readonly [K in keyof D]?:
-      | PropertyKey
-      | (ValueOf<D, K> extends Record<PropertyKey, unknown>
-          ? For<ValueOf<D, K>>
-          : never);
-  };
-}
+export type Map<
+  FlatKey extends PropertyKey = PropertyKey,
+  D = Record<PropertyKey, unknown>,
+> = { readonly [K in keyof D]?: FlatKey | Map<FlatKey, ValueOf<D, K>> };
 
 export type FlatKeyOf<
   M extends Map,
