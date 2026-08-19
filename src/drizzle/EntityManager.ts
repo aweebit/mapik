@@ -40,8 +40,18 @@ export class EntityManager<
 
   encode<X extends Codec.Constraint.Type<M, A, B>>(
     input: X,
-  ): DeepFlat.Flatten<EntityManager.Map<D, T>, Codec.Encode<M, X, A, B>> {
-    return this.drizzleMapper.flatten(this.codecMapper.encode(input));
+  ): DeepFlat.Flatten<
+    EntityManager.Map<D, T>,
+    // @ts-expect-error
+    Codec.Encode<
+      // no @ts-expect-error here
+      M,
+      X,
+      A,
+      B
+    >
+  > {
+    return this.drizzleMapper.flatten(this.codecMapper.encode(input) as any);
   }
 
   decode<
@@ -56,8 +66,10 @@ export class EntityManager<
     > extends Codec.Constraint.Encoded<M, A, B>
       ? X
       : never,
-  ): DeepFlat.Deepen<EntityManager.Map<D, T>, X> extends infer U extends
-    Codec.Constraint.Encoded<M, A, B>
+  ): DeepFlat.Deepen<
+    EntityManager.Map<D, T>,
+    X
+  > extends Codec.Constraint.Encoded<M, A, B>
     ? Codec.Decode<M, DeepFlat.Deepen<EntityManager.Map<D, T>, X>, A, B>
     : never {
     return this.codecMapper.decode(

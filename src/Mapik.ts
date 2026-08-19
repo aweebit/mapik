@@ -19,8 +19,17 @@ export class MapikBase<
 
   encode<X extends Codec.Constraint.Type<CM, T, D>>(
     input: X,
-  ): DeepFlat.Flatten<DFM, Codec.Encode<CM, X, T, D>> {
-    return this.deepFlatMapper.flatten(this.codecMapper.encode(input));
+  ): DeepFlat.Flatten<
+    DFM, // @ts-expect-error
+    Codec.Encode<
+      // no @ts-expect-error here
+      CM,
+      X,
+      T,
+      D
+    >
+  > {
+    return this.deepFlatMapper.flatten(this.codecMapper.encode(input) as any);
   }
 
   decode<X extends DeepFlat.Constraint.FlatFromFlat<DFM, F>>(
@@ -200,8 +209,12 @@ export class MapikFrom2<
     CM,
     DFM,
     T,
-    DeepFlat.Deepen<DFM, F>,
     // @ts-expect-error
+    DeepFlat.Deepen<
+      // no @ts-expect-error here
+      DFM,
+      F
+    >,
     F
   > {
     const codecMapper = new Codec.Mapper<CM, T, DeepFlat.Deepen<DFM, F>>(map);
@@ -209,8 +222,12 @@ export class MapikFrom2<
       CM,
       DFM,
       T,
-      DeepFlat.Deepen<DFM, F>,
       // @ts-expect-error
+      DeepFlat.Deepen<
+        // no @ts-expect-error here
+        DFM,
+        F
+      >,
       F
     >(codecMapper, this.deepFlatMapper);
   }

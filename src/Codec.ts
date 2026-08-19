@@ -1,13 +1,12 @@
 import {
   getOwnKeys,
-  type DeepRecord,
   type IsAny,
   type MutuallyAssignable,
   type Simplify,
   type ValueOf,
 } from "./utils/index.js";
 
-export type Config<T, E = T> = {
+export type Config<T = any, E = T> = {
   readonly decode: (input: E) => T;
   readonly encode: (input: T) => E;
 };
@@ -17,7 +16,7 @@ const codecFor = {
   encode: <E>(config: Config<any, E>) => new Codec(config),
 } as const;
 
-export class Codec<T, E = T> implements Config<T, E> {
+export class Codec<T = any, E = T> implements Config<T, E> {
   // @ts-expect-error
   readonly #private: undefined;
 
@@ -44,17 +43,18 @@ export class Codec<T, E = T> implements Config<T, E> {
 export const makeFor = Codec.makeFor;
 export const make = Codec.make;
 
-export type AnyMap = Codec<any> | DeepRecord<PropertyKey, Codec<any>>;
+export type Map<T = any, E = T> = Codec<T, E> | MapInnerNode<T, E>;
 
-export type Map<T, E = T> = Codec<T, E> | MapInnerNode<T, E>;
-
-export type MapInnerNode<T, E = T> = T | E extends object
-  ? (() => never) extends T | E
-    ? never
-    : MutuallyAssignable<keyof T, keyof E> extends true
-      ? MapInnerNodeHelper<T, E>
-      : never
-  : never;
+export type MapInnerNode<T = any, E = T> =
+  IsAny<T | E> extends true
+    ? MapInnerNodeHelper<T, E>
+    : T | E extends object
+      ? (() => never) extends T | E
+        ? never
+        : MutuallyAssignable<keyof T, keyof E> extends true
+          ? MapInnerNodeHelper<T, E>
+          : never
+      : never;
 
 type MapInnerNodeHelper<
   T,
@@ -82,10 +82,10 @@ type PickSide<S extends SideName, T, E> = S extends "Type"
     : never;
 
 export declare namespace Infer {
-  type Side<S extends SideName, M extends AnyMap, X = unknown> =
+  type Side<S extends SideName, M extends Map | undefined, X = unknown> =
     M extends Codec<infer T, infer E>
       ? PickSide<S, T, E>
-      : M extends DeepRecord<PropertyKey, Codec<any>>
+      : M extends MapInnerNode
         ? Simplify<
             Omit<X, keyof M> &
               (keyof X & keyof M extends infer K extends keyof X
@@ -97,9 +97,9 @@ export declare namespace Infer {
           >
         : never;
 
-  export type Type<M extends AnyMap, E = unknown> = Side<"Type", M, E>;
+  export type Type<M extends Map, E = unknown> = Side<"Type", M, E>;
 
-  export type Encoded<M extends AnyMap, T = unknown> = Side<"Encoded", M, T>;
+  export type Encoded<M extends Map, T = unknown> = Side<"Encoded", M, T>;
 }
 
 export declare namespace Constraint {
@@ -222,11 +222,7 @@ export class Mapper<
     return this.transform("encode", input, this.map);
   }
 
-  protected transform(
-    operation: "decode" | "encode",
-    source: any,
-    map: AnyMap,
-  ) {
+  protected transform(operation: "decode" | "encode", source: any, map: Map) {
     if (map instanceof Codec) return map[operation](source);
     const target: object = Object.create(Object.getPrototypeOf(source));
     const overwrites: Record<PropertyKey, unknown> = {};
