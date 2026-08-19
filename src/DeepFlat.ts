@@ -21,7 +21,7 @@ export type FlatKeyOf<
     ? MV extends PropertyKey
       ? MV
       : MV extends Map
-        ? ValueOf<D, K> extends infer DV
+        ? D[K] extends infer DV
           ? DV extends Constraint.Deep<MV>
             ? FlatKeyOf<MV, DV>
             : never
@@ -68,18 +68,17 @@ export type Flatten<
   D extends Constraint.Deep<M>,
   FK extends FlatKeyOf<M, D> = FlatKeyOf<M, D>,
 > = Map extends M
-  ? Record<PropertyKey, unknown>
-  : {
-        [K in FK]: FlattenHelperRecur<M, D, K>;
-      } extends infer T extends Record<
-        FK,
-        [unknown, { required: FK; optional: FK }]
-      >
-    ? Simplify<
-        FlattenHelperPick<T, T[FK][1]["required"]> &
-          Partial<FlattenHelperPick<T, T[FK][1]["optional"]>>
-      >
-    : never;
+  ? // Record<PropertyKey, unknown> breaks assignability to AbstractMapper
+    // (likely related to https://github.com/microsoft/TypeScript/issues/58765)
+    { [x: PropertyKey]: unknown }
+  : Simplify<
+      { [K in FK]: FlattenHelperRecur<M, D, K> } extends infer T extends {
+        [K in FK]: [unknown, { required: K; optional: K }];
+      }
+        ? FlattenHelperPick<T, T[FK][1]["required"]> &
+            Partial<FlattenHelperPick<T, T[FK][1]["optional"]>>
+        : never
+    >;
 
 type FlattenHelperPick<
   T extends Record<PropertyKey, [unknown, unknown]>,
@@ -89,7 +88,7 @@ type FlattenHelperPick<
 type FlattenHelperRecur<
   M extends Map,
   D extends Constraint.Deep<M>,
-  FK extends PropertyKey = FlatKeyOf<M, D>,
+  FK extends PropertyKey,
   O extends boolean = false, // inherited optionality
 > = {
   [K in keyof M & keyof D]: M[K] extends infer MV
@@ -117,7 +116,9 @@ type FlattenHelperOptionality<
 > = O extends true ? O : HasRequiredKeys<Pick<D, K>> extends true ? O : true;
 
 export type Deepen<M extends Map, F extends Constraint.Flat<M>> = Map extends M
-  ? Record<PropertyKey, unknown>
+  ? // Record<PropertyKey, unknown> breaks assignability to AbstractMapper
+    // (likely related to https://github.com/microsoft/TypeScript/issues/58765)
+    { [x: PropertyKey]: unknown }
   : Simplify<
       {
         -readonly [K in keyof F as MapFlatKeyBack<M, K>]: ValueOf<F, K>;
