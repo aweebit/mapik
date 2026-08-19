@@ -4,8 +4,9 @@ import type { IsAny } from "./utils/index.js";
 export class MapikBase<
   CM extends Codec.Map<T, D> = any,
   DFM extends DeepFlat.Map = DeepFlat.Map,
-  T = IsAny<CM> extends true ? any : Codec.Infer.Type<CM>,
-  D extends DeepFlat.Constraint.Deep<DFM> = DeepFlat.Constraint.Deep<DFM>,
+  T = Codec.Infer.Type<CM>,
+  D extends DeepFlat.Constraint.DeepFromFlat<DFM, F> =
+    DeepFlat.Constraint.Deep<DFM>,
   F extends DeepFlat.Constraint.FlatFromDeep<DFM, D> =
     DeepFlat.Constraint.FlatFromDeep<DFM, D>,
 > {
@@ -20,7 +21,8 @@ export class MapikBase<
   encode<X extends Codec.Constraint.Type<CM, T, D>>(
     input: X,
   ): DeepFlat.Flatten<
-    DFM, // @ts-expect-error
+    DFM,
+    // @ts-expect-error
     Codec.Encode<
       // no @ts-expect-error here
       CM,
@@ -52,8 +54,9 @@ export class MapikBase<
 export class Mapik<
   CM extends Codec.Map<T, D> = any,
   DFM extends DeepFlat.Map = DeepFlat.Map,
-  T = IsAny<CM> extends true ? any : Codec.Infer.Type<CM>,
-  D extends DeepFlat.Constraint.Deep<DFM> = DeepFlat.Constraint.Deep<DFM>,
+  T = Codec.Infer.Type<CM>,
+  D extends DeepFlat.Constraint.DeepFromFlat<DFM, F> =
+    DeepFlat.Constraint.Deep<DFM>,
   F extends DeepFlat.Constraint.FlatFromDeep<DFM, D> =
     DeepFlat.Constraint.FlatFromDeep<DFM, D>,
 > extends MapikBase<CM, DFM, T, D, F> {
@@ -78,8 +81,9 @@ export class Mapik<
   static make<
     CM extends Codec.Map<T, D>,
     DFM extends DeepFlat.Map,
-    T = IsAny<CM> extends true ? any : Codec.Infer.Type<CM>,
-    D extends DeepFlat.Constraint.Deep<DFM> = DeepFlat.Constraint.Deep<DFM>,
+    T = Codec.Infer.Type<CM>,
+    D extends DeepFlat.Constraint.DeepFromFlat<DFM, F> =
+      DeepFlat.Constraint.Deep<DFM>,
     F extends DeepFlat.Constraint.FlatFromDeep<DFM, D> =
       DeepFlat.Constraint.FlatFromDeep<DFM, D>,
   >(

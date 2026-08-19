@@ -83,19 +83,21 @@ type PickSide<S extends SideName, T, E> = S extends "Type"
 
 export declare namespace Infer {
   type Side<S extends SideName, M extends Map | undefined, X = unknown> =
-    M extends Codec<infer T, infer E>
-      ? PickSide<S, T, E>
-      : M extends MapInnerNode
-        ? Simplify<
-            Omit<X, keyof M> &
-              (keyof X & keyof M extends infer K extends keyof X
-                ? { [P in K]: Side<S, M[K], ValueOf<X, K>> }
-                : never) &
-              (Exclude<keyof M, keyof X> extends infer K extends PropertyKey
-                ? { readonly [P in K]?: Side<S, M[K]> }
-                : never)
-          >
-        : never;
+    IsAny<M> extends true
+      ? any
+      : M extends Codec<infer T, infer E>
+        ? PickSide<S, T, E>
+        : M extends MapInnerNode
+          ? Simplify<
+              Omit<X, keyof M> &
+                (keyof X & keyof M extends infer K extends keyof X
+                  ? { [P in K]: Side<S, M[K], ValueOf<X, K>> }
+                  : never) &
+                (Exclude<keyof M, keyof X> extends infer K extends PropertyKey
+                  ? { readonly [P in K]?: Side<S, M[K]> }
+                  : never)
+            >
+          : never;
 
   export type Type<M extends Map, E = unknown> = Side<"Type", M, E>;
 
@@ -190,10 +192,13 @@ const mapperFor = {
 
 export class Mapper<
   const M extends Map<T, E> = any,
-  T = IsAny<M> extends true ? any : Infer.Type<M>,
-  E = IsAny<M> extends true ? any : Infer.Encoded<M>,
+  T = Infer.Type<M>,
+  E = Infer.Encoded<M>,
 > {
-  constructor(readonly map: M) {}
+  constructor(readonly map: M) {
+    this.decode = this.decode.bind(this);
+    this.encode = this.encode.bind(this);
+  }
 
   static makeFor<X>(): {
     readonly decode: <const M extends Map<T, X>, T = Infer.Type<M, X>>(

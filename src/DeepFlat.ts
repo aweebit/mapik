@@ -1,7 +1,6 @@
 import { type IdentityMap } from "./Utils.js";
 import {
   getOwnKeys,
-  typePropertyError,
   type HasRequiredKeys,
   type PropagateRequired,
   type Simplify,
@@ -50,9 +49,9 @@ export declare namespace Constraint {
           ? Deep<MV>
           : never
       : never;
-  };
+  } & {};
 
-  export type DeepFromFlat<M extends Map, F extends Flat<M> = Flat<M>> = {
+  export type DeepFromFlat<M extends Map, F extends Flat<M>> = {
     readonly [K in keyof M]?: M[K] extends infer MV
       ? MV extends PropertyKey
         ? ValueOf<F, MV & keyof F>
@@ -60,7 +59,7 @@ export declare namespace Constraint {
           ? DeepFromFlat<MV, F>
           : never
       : never;
-  };
+  } & {};
 }
 
 export type Flatten<
@@ -152,14 +151,10 @@ export abstract class AbstractMapper<
   F extends Constraint.Flat<M> = Constraint.Flat<M>,
 > {
   // @ts-expect-error
-  readonly #private: undefined;
-
-  get Variance(): {
+  #variance?: {
     Map: M;
-    Flat(x: F): never;
-  } {
-    throw typePropertyError();
-  }
+    Flat(_: F): never;
+  };
 
   constructor() {
     this.flatten = this.flatten.bind(this);

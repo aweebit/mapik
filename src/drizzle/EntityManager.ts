@@ -1,7 +1,6 @@
 import type { Table, View } from "drizzle-orm";
 import { Codec, type DeepFlat } from "../index.js";
 import { createDeepenAtDelimiter, type DeepenAtDelimiter } from "../Utils.js";
-import type { IsAny } from "../utils/index.js";
 import { Drizzle } from "./index.js";
 
 export namespace EntityManager {
@@ -21,12 +20,12 @@ export class EntityManager<
   A = any,
   T extends Table | View = Table | View,
   const M extends Codec.Map<A, B> = any,
-  B extends EntityManager.IntermediateType<D, T> = IsAny<M> extends true
-    ? any
-    : Codec.Infer.Encoded<M, A> extends infer B extends
-          EntityManager.IntermediateType<D, T>
-      ? B
-      : never,
+  B extends EntityManager.IntermediateType<D, T> = Codec.Infer.Encoded<
+    M,
+    A
+  > extends infer B extends EntityManager.IntermediateType<D, T>
+    ? B
+    : never,
 > {
   readonly codecMapper: Codec.Mapper<M, A, B>;
 
