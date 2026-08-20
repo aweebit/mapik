@@ -229,7 +229,7 @@ export class Mapper<
         Constraint.FlatFromDeep<M, D>
       > => new Mapper(map),
       deepen: <F extends Constraint.Flat<M>>() => new Mapper<M, F>(map),
-    } as const;
+    };
   }
 
   static make<
@@ -283,7 +283,7 @@ export class AdHocDelimiterMapper<
       >(): ValidateDeepenAtDelimiterInput<D, T, AdHocDelimiterMapper<D, T>> => {
         return mapper;
       },
-    } as const;
+    };
   }
 
   override flatten<
