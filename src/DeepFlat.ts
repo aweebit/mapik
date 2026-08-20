@@ -13,8 +13,12 @@ import {
 
 export type Map<
   FlatKey extends PropertyKey = PropertyKey,
-  D = Record<PropertyKey, unknown>,
-> = { readonly [K in keyof D]?: FlatKey | Map<FlatKey, ValueOf<D, K>> };
+  D extends Record<PropertyKey, unknown> = Record<PropertyKey, unknown>,
+> = {
+  readonly [K in keyof D]?:
+    | FlatKey
+    | Map<FlatKey, ValueOf<D, K> & Record<PropertyKey, unknown>>;
+};
 
 export type FlatKeyOf<
   M extends Map,
