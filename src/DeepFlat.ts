@@ -1,4 +1,8 @@
-import { type IdentityMap } from "./Utils.js";
+import {
+  type DelimiterMap,
+  type IdentityMap,
+  type ValidateDeepenAtDelimiterInput,
+} from "./Utils.js";
 import {
   getOwnKeys,
   type HasRequiredKeys,
@@ -213,32 +217,19 @@ export class MapperBase<
     return process(this.map) as Deepen<M, X>;
   }
 }
-class MapperFrom<const M extends Map> {
-  constructor(private readonly map: M) {}
-
-  flatten<D extends Constraint.Deep<M>>() {
-    return new Mapper<M, Constraint.FlatFromDeep<M, D>>(this.map);
-  }
-
-  deepen<F extends Constraint.Flat<M>>() {
-    return new Mapper<M, F>(this.map);
-  }
-}
 
 export class Mapper<
   const M extends Map = Map,
   F extends Constraint.Flat<M> = Constraint.Flat<M>,
 > extends MapperBase<M, F> {
-  static makeFrom<const M extends Map>(
-    map: M,
-  ): {
-    flatten: <D extends Constraint.Deep<M>>() => Mapper<
-      M,
-      Constraint.FlatFromDeep<M, D>
-    >;
-    deepen: <F extends Constraint.Flat<M>>() => Mapper<M, F>;
-  } {
-    return new MapperFrom(map);
+  static makeFrom<const M extends Map>(map: M) {
+    return {
+      flatten: <D extends Constraint.Deep<M>>(): Mapper<
+        M,
+        Constraint.FlatFromDeep<M, D>
+      > => new Mapper(map),
+      deepen: <F extends Constraint.Flat<M>>() => new Mapper<M, F>(map),
+    } as const;
   }
 
   static make<
@@ -273,5 +264,68 @@ export class IdentityMapper<
     flat: X,
   ) {
     return { ...flat } as Deepen<IdentityMap<keyof T>, X>;
+  }
+}
+
+export class AdHocDelimiterMapper<
+  D extends string = string,
+  T extends Record<PropertyKey, unknown> = Record<PropertyKey, unknown>,
+> extends AbstractMapper<DelimiterMap<D, keyof T>, T> {
+  protected constructor(readonly delimiter: D) {
+    super();
+  }
+
+  static make<D extends string>(delimiter: D) {
+    const mapper = new AdHocDelimiterMapper<D, any>(delimiter);
+    return {
+      for: <
+        T extends Record<PropertyKey, unknown>,
+      >(): ValidateDeepenAtDelimiterInput<D, T, AdHocDelimiterMapper<D, T>> => {
+        return mapper;
+      },
+    } as const;
+  }
+
+  override flatten<
+    X extends Constraint.DeepFromFlat<DelimiterMap<D, keyof T>, T>,
+  >(deep: X): Flatten<DelimiterMap<D, keyof T>, X> {
+    const result: Record<PropertyKey, unknown> = {};
+    const process = (deep: Record<PropertyKey, unknown>, pathKey = "") => {
+      for (const key of Object.getOwnPropertyNames(deep)) {
+        const fullKey = `${pathKey}_${key}`;
+        const value = deep[key];
+        if (
+          typeof value === "object" &&
+          value !== null &&
+          !(value instanceof Date)
+        ) {
+          process(value as Record<PropertyKey, unknown>, fullKey);
+        } else {
+          result[fullKey.slice(1)] = value;
+        }
+      }
+    };
+    process(deep);
+    return result as Flatten<DelimiterMap<D, keyof T>, X>;
+  }
+
+  override deepen<
+    X extends Constraint.FlatFromFlat<DelimiterMap<D, keyof T>, T>,
+  >(
+    flat: ValidateDeepenAtDelimiterInput<D, X>,
+  ): ValidateDeepenAtDelimiterInput<D, X, Deepen<DelimiterMap<D, keyof T>, X>> {
+    const result: Record<PropertyKey, unknown> = {};
+    for (const key of Object.getOwnPropertyNames(flat)) {
+      const splitKey = key.split(this.delimiter);
+      let target = result;
+      let i = 0;
+      let currentKey = splitKey[0]!;
+      while (i < splitKey.length - 1) {
+        target = (target[currentKey] ??= {}) as Record<PropertyKey, unknown>;
+        currentKey = splitKey[++i]!;
+      }
+      target[currentKey] = flat[key as keyof X];
+    }
+    return result as Deepen<DelimiterMap<D, keyof T>, X>;
   }
 }

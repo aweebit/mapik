@@ -16,6 +16,11 @@ export const identityMap = <const Ks extends readonly PropertyKey[]>(
   >;
 };
 
+export type DelimiterMap<
+  D extends string,
+  K extends PropertyKey,
+> = DeepenAtDelimiter<D, IdentityMap<K>>;
+
 export type DeepenAtDelimiter<
   D extends string,
   T extends Record<string, unknown>,
@@ -44,6 +49,7 @@ export type DeepenAtDelimiter<
 export type ValidateDeepenAtDelimiterInput<
   D extends string,
   T extends Record<string, unknown>,
+  Then = T,
 > = (
   [keyof T & string, keyof T & string] extends [infer K, infer J]
     ? K extends string
@@ -53,7 +59,7 @@ export type ValidateDeepenAtDelimiterInput<
       : never
     : never
 ) extends never
-  ? T
+  ? Then
   : never;
 
 export type CreateDeepenAtDelimiter<D extends string> = <
