@@ -195,6 +195,9 @@ export class Mapper<
   T = Infer.Type<M>,
   E = Infer.Encoded<M>,
 > {
+  // @ts-expect-error
+  #private: undefined;
+
   constructor(readonly map: M) {
     this.decode = this.decode.bind(this);
     this.encode = this.encode.bind(this);

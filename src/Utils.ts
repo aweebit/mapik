@@ -6,7 +6,7 @@ import type {
   Writable,
 } from "./utils/index.js";
 
-export type IdentityMap<K extends PropertyKey> = { [P in K]: P } & {};
+export type IdentityMap<K extends PropertyKey> = Simplify<{ [P in K]: P }>;
 
 export const identityMap = <const Ks extends readonly PropertyKey[]>(
   keys: Ks,
