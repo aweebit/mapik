@@ -35,12 +35,10 @@ export const createCreateEntityManager = <D extends string>(delimiter: D) => {
             ? never
             : {}
           : never,
-      B extends EntityManager.IntermediateType<D, T> = Codec.Infer.Encoded<
-        M,
-        A
-      > extends infer B extends EntityManager.IntermediateType<D, T>
-        ? B
-        : never,
+      B extends EntityManager.IntermediateType<D, T> = DeepFlat.DeepSimplify<
+        EntityManager.Map<D, T>,
+        EntityManager.IntermediateType<D, T> & Codec.Infer.Encoded<M, A>
+      >,
     >(
       table: T,
       ...[map]: {} extends M ? [map?: M] : [map: M]
@@ -53,6 +51,6 @@ export const createCreateEntityManager = <D extends string>(delimiter: D) => {
         // @ts-expect-error
         Drizzle.InferSelect<// no @ts-expect-error here
         T>
-      >(new Codec.Mapper(map ?? ({} as M)), makeDrizzleMapper(table));
+      >(map ?? ({} as M), makeDrizzleMapper(table));
   };
 };
