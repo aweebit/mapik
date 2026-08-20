@@ -154,6 +154,23 @@ type KeyExceptRequiredNever<T> = {
 
 type RemoveRequiredNever<T> = Pick<T, KeyExceptRequiredNever<T>>;
 
+export type DeepSimplify<
+  M extends Map,
+  D extends Constraint.Deep<M>,
+> = DeepSimplifyHelper<M, D>;
+
+type DeepSimplifyHelper<
+  M extends Map,
+  D,
+  K extends keyof D = keyof M & keyof D,
+> = {
+  [P in K]: M[P] extends infer MV
+    ? MV extends Map
+      ? DeepSimplifyHelper<MV, ValueOf<D, P>>
+      : ValueOf<D, P>
+    : never;
+} & {};
+
 export abstract class AbstractMapper<
   M extends Map = Map,
   F extends Constraint.Flat<M> = Constraint.Flat<M>,

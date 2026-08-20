@@ -115,8 +115,10 @@ export class Mapik<
   static make<T, F extends Record<PropertyKey, unknown>>(): <
     CM extends Codec.Map<T, D>,
     DFM extends DeepFlat.Map<keyof F> = IdentityMap<keyof F>,
-    D extends DeepFlat.Constraint.DeepFromFlat<DFM, F> =
-      DeepFlat.Constraint.DeepFromFlat<DFM, F> & Codec.Infer.Encoded<CM>,
+    D extends DeepFlat.Constraint.DeepFromFlat<DFM, F> = DeepFlat.DeepSimplify<
+      DFM,
+      DeepFlat.Constraint.DeepFromFlat<DFM, F> & Codec.Infer.Encoded<CM>
+    >,
   >(
     codecMapOrMapper:
       | CM
