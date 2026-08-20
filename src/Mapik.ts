@@ -66,7 +66,7 @@ export class Mapik<
     (X extends Record<PropertyKey, unknown>
       ? {
           readonly decode: <
-            const CM extends Codec.Map<T, X>,
+            CM extends Codec.Map<T, X>,
             T = Codec.Infer.Type<CM, X>,
           >(
             codecMapOrMapper: CM | Codec.Mapper<CM, T, X>,
@@ -74,7 +74,7 @@ export class Mapik<
         }
       : unknown) & {
       encode: <
-        const CM extends Codec.Map<X, D>,
+        CM extends Codec.Map<X, D>,
         D extends Record<PropertyKey, unknown> = Simplify<
           Record<PropertyKey, unknown> & Codec.Infer.Encoded<CM, X>
         >,
@@ -113,7 +113,7 @@ export class Mapik<
   }
 
   static make<T, F extends Record<PropertyKey, unknown>>(): <
-    const CM extends Codec.Map<T, D>,
+    CM extends Codec.Map<T, D>,
     DFM extends DeepFlat.Map<keyof F> = IdentityMap<keyof F>,
     D extends DeepFlat.Constraint.DeepFromFlat<DFM, F> = Simplify<
       DeepFlat.Constraint.DeepFromFlat<DFM, F> & Codec.Infer.Encoded<CM>
@@ -243,7 +243,7 @@ class MapikFrom<
   }
 
   decode<
-    const CM extends Codec.Map<T, DeepFlat.Deepen<DFM, F>>,
+    CM extends Codec.Map<T, DeepFlat.Deepen<DFM, F>>,
     T = Codec.Infer.Type<CM, DeepFlat.Deepen<DFM, F>>,
   >(codecMapperOrMap: CM | Codec.Mapper<CM, T, DeepFlat.Deepen<DFM, F>>) {
     if (!(codecMapperOrMap instanceof Codec.Mapper))

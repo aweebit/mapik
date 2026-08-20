@@ -191,7 +191,7 @@ const mapperFor = {
 } as const;
 
 export class Mapper<
-  const M extends Map<T, E> = any,
+  M extends Map<T, E> = any,
   T = Infer.Type<M>,
   E = Infer.Encoded<M>,
 > {
@@ -204,21 +204,19 @@ export class Mapper<
   }
 
   static makeFor<X>(): {
-    readonly decode: <const M extends Map<T, X>, T = Infer.Type<M, X>>(
+    readonly decode: <M extends Map<T, X>, T = Infer.Type<M, X>>(
       map: M,
     ) => Mapper<M, T, X>;
-    readonly encode: <const M extends Map<X, E>, E = Infer.Encoded<M, X>>(
+    readonly encode: <M extends Map<X, E>, E = Infer.Encoded<M, X>>(
       map: M,
     ) => Mapper<M, X, E>;
   } {
     return mapperFor;
   }
 
-  static make<
-    const M extends Map<T, E>,
-    T = Infer.Type<M>,
-    E = Infer.Encoded<M>,
-  >(map: M) {
+  static make<M extends Map<T, E>, T = Infer.Type<M>, E = Infer.Encoded<M>>(
+    map: M,
+  ) {
     return new Mapper<M, T, E>(map);
   }
 

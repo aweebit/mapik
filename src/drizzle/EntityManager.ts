@@ -26,7 +26,7 @@ export const createCreateEntityManager = <D extends string>(delimiter: D) => {
   return function createEntityManager<A>() {
     return <
       T extends Table,
-      const M extends Codec.Map<A, B> = // @ts-expect-error
+      M extends Codec.Map<A, B> = // @ts-expect-error
         [
           // no @ts-expect-error here
           A,
