@@ -1,5 +1,5 @@
 import type { Table, View } from "drizzle-orm";
-import { Codec, type DeepFlat } from "../index.js";
+import { Codec, Mapik, type DeepFlat } from "../index.js";
 import { createDeepenAtDelimiter, type DeepenAtDelimiter } from "../Utils.js";
 import { Drizzle } from "./index.js";
 
@@ -13,68 +13,6 @@ export namespace EntityManager {
     D extends string,
     T extends Table | View,
   > = DeepFlat.Constraint.DeepFromFlat<Map<D, T>, Drizzle.InferSelect<T>>;
-}
-
-export class EntityManager<
-  D extends string,
-  A = any,
-  T extends Table | View = Table | View,
-  const M extends Codec.Map<A, B> = any,
-  B extends EntityManager.IntermediateType<D, T> = Codec.Infer.Encoded<
-    M,
-    A
-  > extends infer B extends EntityManager.IntermediateType<D, T>
-    ? B
-    : never,
-> {
-  readonly codecMapper: Codec.Mapper<M, A, B>;
-
-  constructor(
-    readonly delimiter: D,
-    readonly drizzleMapper: Drizzle.Mapper<T, EntityManager.Map<D, T>>,
-    readonly map: M,
-  ) {
-    this.codecMapper = new Codec.Mapper(map);
-  }
-
-  encode<X extends Codec.Constraint.Type<M, A, B>>(
-    input: X,
-  ): DeepFlat.Flatten<
-    EntityManager.Map<D, T>,
-    // @ts-expect-error
-    Codec.Encode<
-      // no @ts-expect-error here
-      M,
-      X,
-      A,
-      B
-    >
-  > {
-    return this.drizzleMapper.flatten(this.codecMapper.encode(input) as any);
-  }
-
-  decode<
-    X extends DeepFlat.Constraint.FlatFromFlat<
-      EntityManager.Map<D, T>,
-      Drizzle.InferSelect<T>
-    >,
-  >(
-    input: DeepFlat.Deepen<
-      EntityManager.Map<D, T>,
-      X
-    > extends Codec.Constraint.Encoded<M, A, B>
-      ? X
-      : never,
-  ): DeepFlat.Deepen<
-    EntityManager.Map<D, T>,
-    X
-  > extends Codec.Constraint.Encoded<M, A, B>
-    ? Codec.Decode<M, DeepFlat.Deepen<EntityManager.Map<D, T>, X>, A, B>
-    : never {
-    return this.codecMapper.decode(
-      this.drizzleMapper.deepen(input) as any,
-    ) as any;
-  }
 }
 
 export const createCreateEntityManager = <D extends string>(delimiter: D) => {
@@ -107,10 +45,14 @@ export const createCreateEntityManager = <D extends string>(delimiter: D) => {
       table: T,
       ...[map]: {} extends M ? [map?: M] : [map: M]
     ) =>
-      new EntityManager<D, A, T, M, B>(
-        delimiter,
-        makeDrizzleMapper(table),
-        (map ?? {}) as M,
-      );
+      new Mapik.Mapik<
+        M,
+        EntityManager.Map<D, T>,
+        A,
+        B,
+        // @ts-expect-error
+        Drizzle.InferSelect<// no @ts-expect-error here
+        T>
+      >(new Codec.Mapper(map ?? ({} as M)), makeDrizzleMapper(table));
   };
 };
