@@ -188,7 +188,7 @@ const mapperFor = {
   encode: (map: any) => new Mapper(map),
 } as const;
 
-export class Mapper<
+export class MapperBase<
   M extends Map<T, E> = any,
   T = Infer.Type<M>,
   E = Infer.Encoded<M>,
@@ -201,6 +201,29 @@ export class Mapper<
     this.encode = this.encode.bind(this);
   }
 
+  decode<X extends Constraint.Encoded<M, T, E>>(input: X): Decode<M, X, T, E> {
+    return this.transform("decode", input, this.map);
+  }
+
+  encode<X extends Constraint.Type<M, T, E>>(input: X): Encode<M, X, T, E> {
+    return this.transform("encode", input, this.map);
+  }
+
+  protected transform(operation: "decode" | "encode", source: any, map: Map) {
+    if (map instanceof Codec) return map[operation](source);
+    const target: object = Object.create(Object.getPrototypeOf(source));
+    const overwrites: Record<PropertyKey, unknown> = {};
+    for (const key of getOwnKeys(map))
+      overwrites[key] = this.transform(operation, source[key], map[key]!);
+    return Object.assign(target, source, overwrites);
+  }
+}
+
+export class Mapper<
+  M extends Map<T, E> = any,
+  T = Infer.Type<M>,
+  E = Infer.Encoded<M>,
+> extends MapperBase<M, T, E> {
   static makeFor<X>(): {
     readonly decode: <M extends Map<T, X>, T = Infer.Type<M, X>>(
       map: M,
@@ -220,22 +243,5 @@ export class Mapper<
     return map
       ? new Mapper<M, T, E>(map)
       : <M extends Map<T, E>>(map: M) => new Mapper<M, T, E>(map);
-  }
-
-  decode<X extends Constraint.Encoded<M, T, E>>(input: X): Decode<M, X, T, E> {
-    return this.transform("decode", input, this.map);
-  }
-
-  encode<X extends Constraint.Type<M, T, E>>(input: X): Encode<M, X, T, E> {
-    return this.transform("encode", input, this.map);
-  }
-
-  protected transform(operation: "decode" | "encode", source: any, map: Map) {
-    if (map instanceof Codec) return map[operation](source);
-    const target: object = Object.create(Object.getPrototypeOf(source));
-    const overwrites: Record<PropertyKey, unknown> = {};
-    for (const key of getOwnKeys(map))
-      overwrites[key] = this.transform(operation, source[key], map[key]!);
-    return Object.assign(target, source, overwrites);
   }
 }
