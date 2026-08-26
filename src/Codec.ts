@@ -11,10 +11,8 @@ export type Config<T = any, E = T> = {
   readonly encode: (input: T) => E;
 };
 
-const codecFor = {
-  decode: <T>(config: Config<T, any>) => new Codec(config),
-  encode: <E>(config: Config<any, E>) => new Codec(config),
-} as const;
+const build = (config: Config<any, any>) => new Codec(config);
+const codecFor = { decode: build, encode: build } as const;
 
 export class Codec<T = any, E = T> implements Config<T, E> {
   // @ts-expect-error
@@ -214,10 +212,14 @@ export class Mapper<
     return mapperFor;
   }
 
+  static make<T, E>(): <M extends Map<T, E>>(map: M) => Mapper<M, T, E>;
   static make<M extends Map<T, E>, T = Infer.Type<M>, E = Infer.Encoded<M>>(
     map: M,
-  ) {
-    return new Mapper<M, T, E>(map);
+  ): Mapper<M, T, E>;
+  static make<M extends Map<T, E>, T, E>(map?: M) {
+    return map
+      ? new Mapper<M, T, E>(map)
+      : <M extends Map<T, E>>(map: M) => new Mapper<M, T, E>(map);
   }
 
   decode<X extends Constraint.Encoded<M, T, E>>(input: X): Decode<M, X, T, E> {

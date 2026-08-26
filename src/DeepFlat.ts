@@ -8,6 +8,7 @@ import {
   type HasRequiredKeys,
   type PropagateRequired,
   type Simplify,
+  type SimplifyReadonly,
   type ValueOf,
 } from "./utils/index.js";
 
@@ -38,7 +39,9 @@ export type FlatKeyOf<
 }[keyof M & keyof D];
 
 export declare namespace Constraint {
-  export type Flat<M extends Map> = { readonly [K in FlatKeyOf<M>]?: unknown };
+  export type Flat<M extends Map> = {
+    readonly [K in FlatKeyOf<M>]?: unknown;
+  } & {};
 
   export type FlatFromFlat<M extends Map, F extends Flat<M>> = {
     readonly [K in keyof F]?: F[K];
@@ -239,18 +242,42 @@ export class MapperBase<
   }
 }
 
+const build = (map: Map) => new Mapper<any>(map);
+const mapperFor = { flatten: build, deepen: build } as const;
+
 export class Mapper<
   const M extends Map = Map,
   F extends Constraint.Flat<M> = Constraint.Flat<M>,
 > extends MapperBase<M, F> {
-  static makeFrom<const M extends Map>(map: M) {
-    return {
-      flatten: <D extends Constraint.Deep<M>>(): Mapper<
-        M,
-        Constraint.FlatFromDeep<M, D>
-      > => new Mapper(map),
-      deepen: <F extends Constraint.Flat<M>>() => new Mapper<M, F>(map),
-    };
+  static makeFor<X extends Record<PropertyKey, unknown>>(): {
+    readonly flatten: <const M extends Map<PropertyKey, X>>(
+      map: M,
+    ) => Mapper<
+      M,
+      SimplifyReadonly<
+        Flatten<
+          M,
+          // @ts-expect-error
+          X
+        >
+      >
+    >;
+    readonly deepen: <const M extends Map<keyof X>>(map: M) => Mapper<M, X>;
+  } {
+    return mapperFor;
+  }
+
+  static makeFrom<const M extends Map>(
+    map: M,
+  ): {
+    flatten: <D extends Constraint.Deep<M>>() => Mapper<
+      M,
+      SimplifyReadonly<Flatten<M, D>>
+    >;
+    deepen: <F extends Constraint.Flat<M>>() => Mapper<M, F>;
+  } {
+    const build = () => new Mapper(map);
+    return { flatten: build, deepen: build };
   }
 
   static make<
