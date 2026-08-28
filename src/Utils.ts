@@ -23,7 +23,7 @@ export type DelimiterMap<
 
 export type DeepenAtDelimiter<
   D extends string,
-  T extends Record<string, unknown>,
+  T extends object,
 > = T extends unknown
   ? string extends keyof T
     ? DeepRecord<string, ValueOf<T>>
@@ -48,7 +48,7 @@ export type DeepenAtDelimiter<
 
 export type ValidateDeepenAtDelimiterInput<
   D extends string,
-  T extends Record<string, unknown>,
+  T extends object,
   Then = T,
 > = (
   [keyof T & string, keyof T & string] extends [infer K, infer J]
@@ -62,16 +62,14 @@ export type ValidateDeepenAtDelimiterInput<
   ? Then
   : never;
 
-export type CreateDeepenAtDelimiter<D extends string> = <
-  T extends Record<string, unknown>,
->(
+export type CreateDeepenAtDelimiter<D extends string> = <T extends object>(
   flat: ValidateDeepenAtDelimiterInput<D, T>,
 ) => DeepenAtDelimiter<D, T>;
 
 export const createDeepenAtDelimiter = <D extends string>(
   delimiter: D,
 ): CreateDeepenAtDelimiter<D> => {
-  return <T extends Record<string, unknown>>(
+  return <T extends object>(
     flat: ValidateDeepenAtDelimiterInput<D, T>,
   ): DeepenAtDelimiter<D, T> => {
     const deep: Record<string, unknown> = {};

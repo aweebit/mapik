@@ -14,7 +14,7 @@ import {
 
 export type Map<
   FlatKey extends PropertyKey = PropertyKey,
-  D extends Record<PropertyKey, unknown> = Record<PropertyKey, unknown>,
+  D extends object = Record<PropertyKey, unknown>,
 > = {
   readonly [K in keyof D]?:
     | FlatKey
@@ -249,19 +249,10 @@ export class Mapper<
   const M extends Map = Map,
   F extends Constraint.Flat<M> = Constraint.Flat<M>,
 > extends MapperBase<M, F> {
-  static makeFor<X extends Record<PropertyKey, unknown>>(): {
+  static makeFor<X extends object>(): {
     readonly flatten: <const M extends Map<PropertyKey, X>>(
       map: M,
-    ) => Mapper<
-      M,
-      SimplifyReadonly<
-        Flatten<
-          M,
-          // @ts-expect-error
-          X
-        >
-      >
-    >;
+    ) => Mapper<M, SimplifyReadonly<Flatten<M, X>>>;
     readonly deepen: <const M extends Map<keyof X>>(map: M) => Mapper<M, X>;
   } {
     return mapperFor;
@@ -288,36 +279,37 @@ export class Mapper<
   }
 }
 
-export class IdentityMapper<
-  T extends Record<PropertyKey, unknown> = Record<PropertyKey, unknown>,
-> extends AbstractMapper<IdentityMap<keyof T>, T> {
+export class IdentityMapper<T extends object = object> extends AbstractMapper<
+  IdentityMap<keyof T>,
+  T
+> {
   static #instance?: IdentityMapper;
 
   protected constructor() {
     super();
   }
 
-  static for<T extends Record<PropertyKey, unknown>>() {
+  static for<T extends object>() {
     IdentityMapper.#instance ??= new IdentityMapper();
     return IdentityMapper.#instance as IdentityMapper<T>;
   }
 
   override flatten<X extends Constraint.DeepFromFlat<IdentityMap<keyof T>, T>>(
     deep: X,
-  ) {
-    return { ...deep } as Flatten<IdentityMap<keyof T>, X>;
+  ): Flatten<IdentityMap<keyof T>, X> {
+    return { ...deep } as any;
   }
 
   override deepen<X extends Constraint.FlatFromFlat<IdentityMap<keyof T>, T>>(
     flat: X,
-  ) {
-    return { ...flat } as Deepen<IdentityMap<keyof T>, X>;
+  ): Deepen<IdentityMap<keyof T>, X> {
+    return { ...flat } as any;
   }
 }
 
 export class AdHocDelimiterMapper<
   D extends string = string,
-  T extends Record<PropertyKey, unknown> = Record<PropertyKey, unknown>,
+  T extends object = object,
 > extends AbstractMapper<DelimiterMap<D, keyof T>, T> {
   protected constructor(readonly delimiter: D) {
     super();
@@ -326,9 +318,11 @@ export class AdHocDelimiterMapper<
   static make<D extends string>(delimiter: D) {
     const mapper = new AdHocDelimiterMapper<D, any>(delimiter);
     return {
-      for: <
-        T extends Record<PropertyKey, unknown>,
-      >(): ValidateDeepenAtDelimiterInput<D, T, AdHocDelimiterMapper<D, T>> => {
+      for: <T extends object>(): ValidateDeepenAtDelimiterInput<
+        D,
+        T,
+        AdHocDelimiterMapper<D, T>
+      > => {
         return mapper;
       },
     };
