@@ -47,11 +47,9 @@ export type MapInnerNode<T = any, E = T> =
   IsAny<T | E> extends true
     ? MapInnerNodeHelper<T, E>
     : T | E extends object
-      ? (() => never) extends T | E
-        ? never
-        : MutuallyAssignable<keyof T, keyof E> extends true
-          ? MapInnerNodeHelper<T, E>
-          : never
+      ? MutuallyAssignable<keyof T, keyof E> extends true
+        ? MapInnerNodeHelper<T, E>
+        : never
       : never;
 
 type MapInnerNodeHelper<

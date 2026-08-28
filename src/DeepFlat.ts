@@ -77,7 +77,7 @@ export type Flatten<
   M extends Map,
   D extends Constraint.Deep<M>,
   FK extends FlatKeyOf<M, D> = FlatKeyOf<M, D>,
-> = Map extends M
+> = [Map, PropertyKey] extends [M, keyof M]
   ? // Record<PropertyKey, unknown> breaks assignability to AbstractMapper
     // (likely related to https://github.com/microsoft/TypeScript/issues/58765)
     { [x: PropertyKey]: unknown }
@@ -125,7 +125,10 @@ type FlattenHelperOptionality<
   O extends boolean,
 > = O extends true ? O : HasRequiredKeys<Pick<D, K>> extends true ? O : true;
 
-export type Deepen<M extends Map, F extends Constraint.Flat<M>> = Map extends M
+export type Deepen<M extends Map, F extends Constraint.Flat<M>> = [
+  Map,
+  PropertyKey,
+] extends [M, keyof M]
   ? // Record<PropertyKey, unknown> breaks assignability to AbstractMapper
     // (likely related to https://github.com/microsoft/TypeScript/issues/58765)
     { [x: PropertyKey]: unknown }
@@ -160,7 +163,7 @@ type RemoveRequiredNever<T> = Pick<T, KeyExceptRequiredNever<T>>;
 export type DeepSimplify<
   M extends Map,
   D extends Constraint.Deep<M>,
-> = DeepSimplifyHelper<M, D>;
+> = DeepSimplifyHelper<M, D> & {};
 
 type DeepSimplifyHelper<
   M extends Map,

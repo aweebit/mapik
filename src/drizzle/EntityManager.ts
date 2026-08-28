@@ -31,9 +31,7 @@ export const createCreateEntityManager = <D extends string>(delimiter: D) => {
           // no @ts-expect-error here
           A,
         ] extends [object]
-          ? (() => never) extends A
-            ? never
-            : {}
+          ? {}
           : never,
       B extends EntityManager.IntermediateType<D, T> = DeepFlat.DeepSimplify<
         EntityManager.Map<D, T>,

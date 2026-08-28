@@ -84,16 +84,14 @@ const mapikFor = {
 type MapikFor<X> = Simplify<
   {
     readonly encode: ([X] extends [object]
-      ? (() => never) extends X
-        ? unknown
-        : {
-            (): EncodeBuilder<
-              // @ts-expect-error
-              {},
-              X,
-              X
-            >;
-          }
+      ? {
+          (): EncodeBuilder<
+            // @ts-expect-error
+            {},
+            X,
+            X
+          >;
+        }
       : unknown) & {
       <
         CM extends Codec.Map<X, D>,
