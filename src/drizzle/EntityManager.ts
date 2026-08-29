@@ -40,15 +40,22 @@ export const createCreateEntityManager = <D extends string>(delimiter: D) => {
     >(
       table: T,
       ...[map]: {} extends M ? [map?: M] : [map: M]
-    ) =>
+    ): Mapik.Mapik<
+      M,
+      EntityManager.Map<D, T>,
+      A,
+      B,
+      // @ts-expect-error
+      Drizzle.InferSelect<// no @ts-expect-error here
+      T>
+    > =>
       new Mapik.Mapik<
         M,
         EntityManager.Map<D, T>,
         A,
         B,
-        // @ts-expect-error
-        Drizzle.InferSelect<// no @ts-expect-error here
-        T>
+        Drizzle.InferSelect<T> &
+          DeepFlat.Constraint.FlatFromDeep<EntityManager.Map<D, T>, B>
       >(map ?? ({} as M), makeDrizzleMapper(table));
   };
 };
