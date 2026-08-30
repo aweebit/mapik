@@ -41,16 +41,13 @@ export class Codec<T = any, E = T> implements Config<T, E> {
 export const makeFor = Codec.makeFor;
 export const make = Codec.make;
 
-export type Map<T = any, E = T> = Codec<T, E> | MapInnerNode<T, E>;
+export type Map<T = any, E = T> = MapInnerNode<T, E> | Codec<T, E>;
 
-export type MapInnerNode<T = any, E = T> =
-  IsAny<T | E> extends true
+export type MapInnerNode<T = any, E = T> = T | E extends object
+  ? MutuallyAssignable<keyof T, keyof E> extends true
     ? MapInnerNodeHelper<T, E>
-    : T | E extends object
-      ? MutuallyAssignable<keyof T, keyof E> extends true
-        ? MapInnerNodeHelper<T, E>
-        : never
-      : never;
+    : never
+  : never;
 
 type MapInnerNodeHelper<
   T,
@@ -66,6 +63,35 @@ type MapInnerNodeHelper<
     readonly [P in Partition["required"]]: Map<ValueOf<T, P>, ValueOf<E, P>>;
   } & {
     readonly [P in Partition["optional"]]?: Map<ValueOf<T, P>, ValueOf<E, P>>;
+  }
+>;
+
+export type MapCompletionHelper<T = any, E = T> = T | E extends object
+  ? MutuallyAssignable<keyof T, keyof E> extends true
+    ? MapCompletionHelperHelper<T, E>
+    : never
+  : never;
+
+type MapCompletionHelperHelper<
+  T,
+  E,
+  K extends keyof T & keyof E = keyof T & keyof E,
+  Partition extends { required: K; optional: K } = K extends unknown
+    ? MutuallyAssignable<ValueOf<T, K>, ValueOf<E, K>> extends true
+      ? { required: never; optional: K }
+      : { required: K; optional: never }
+    : never,
+> = Simplify<
+  {
+    readonly [P in Partition["required"]]: MapCompletionHelper<
+      ValueOf<T, P>,
+      ValueOf<E, P>
+    >;
+  } & {
+    readonly [P in Partition["optional"]]?: MapCompletionHelper<
+      ValueOf<T, P>,
+      ValueOf<E, P>
+    >;
   }
 >;
 
@@ -223,17 +249,28 @@ export class Mapper<
   E = Infer.Encoded<M>,
 > extends MapperBase<M, T, E> {
   static makeFor<X>(): {
-    readonly decode: <M extends Map<T, X>, T = Infer.Type<M, X>>(
-      map: M,
-    ) => Mapper<M, T, X>;
-    readonly encode: <M extends Map<X, E>, E = Infer.Encoded<M, X>>(
-      map: M,
-    ) => Mapper<M, X, E>;
+    readonly decode: {
+      <M extends MapCompletionHelper<T, X>, T = Infer.Type<M, X>>(
+        map: M & MapCompletionHelper<T, X>,
+      ): Mapper<M, T, X>;
+      <M extends Map<T, X>, T = Infer.Type<M, X>>(map: M): Mapper<M, T, X>;
+    };
+    readonly encode: {
+      <M extends MapCompletionHelper<X, E>, E = Infer.Encoded<M, X>>(
+        map: M & MapCompletionHelper<X, E>,
+      ): Mapper<M, X, E>;
+      <M extends Map<X, E>, E = Infer.Encoded<M, X>>(map: M): Mapper<M, X, E>;
+    };
   } {
     return mapperFor;
   }
 
-  static make<T, E>(): <M extends Map<T, E>>(map: M) => Mapper<M, T, E>;
+  static make<T, E>(): {
+    <M extends MapCompletionHelper<T, E>>(
+      map: M & MapCompletionHelper<T, E>,
+    ): Mapper<M, T, E>;
+    <M extends Map<T, E>>(map: M): Mapper<M, T, E>;
+  };
   static make<M extends Map<T, E>, T = Infer.Type<M>, E = Infer.Encoded<M>>(
     map: M,
   ): Mapper<M, T, E>;

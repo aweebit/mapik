@@ -93,6 +93,17 @@ type MapikFor<X> = Simplify<
         }
       : unknown) & {
       <
+        CM extends Codec.MapCompletionHelper<X, D>,
+        D extends object = // @ts-expect-error
+          Codec.Infer.Encoded<
+            // no @ts-expect-error here
+            CM,
+            X
+          >,
+      >(
+        codecMap: CM & Codec.MapCompletionHelper<X, D>,
+      ): EncodeBuilder<CM, X, D>;
+      <
         CM extends Codec.Map<X, D>,
         D extends object = // @ts-expect-error
           Codec.Infer.Encoded<
@@ -115,7 +126,7 @@ type MapikFor<X> = Simplify<
         codecMapper: Codec.MapperBase<CM, X, D>,
       ): EncodeBuilder<CM, X, D>;
     };
-  } & (X extends object
+  } & ([X] extends [object]
     ? {
         readonly flatten: {
           (
@@ -149,6 +160,12 @@ type MapikFor<X> = Simplify<
             X,
             X
           >;
+          <
+            CM extends Codec.MapCompletionHelper<T, X>,
+            T = Codec.Infer.Type<CM, X>,
+          >(
+            codecMap: CM & Codec.MapCompletionHelper<T, X>,
+          ): EncodeBuilder<CM, T, X>;
           <CM extends Codec.Map<T, X>, T = Codec.Infer.Type<CM, X>>(
             codecMap: CM,
           ): EncodeBuilder<CM, T, X>;
@@ -370,6 +387,23 @@ class DecodeBuilder<
     DFM,
     DeepFlat.Deepen<DFM, F>,
     DeepFlat.Deepen<DFM, F>,
+    F
+  >;
+  decode<
+    CM extends Codec.MapCompletionHelper<T, DeepFlat.Deepen<DFM, F>>,
+    T = Codec.Infer.Type<CM, DeepFlat.Deepen<DFM, F>>,
+  >(
+    codecMap: CM & Codec.MapCompletionHelper<T, DeepFlat.Deepen<DFM, F>>,
+  ): Mapik<
+    CM,
+    DFM,
+    T,
+    // @ts-expect-error
+    DeepFlat.Deepen<
+      // no @ts-expect-error here
+      DFM,
+      F
+    >,
     F
   >;
   decode<
