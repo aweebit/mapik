@@ -21,17 +21,15 @@ export type HasRequiredKeys<T> = Partial<T> extends T ? false : true;
 
 export type PropagateRequired<
   T extends Record<PropertyKey, Record<PropertyKey, unknown>>,
-> = PropagateRequiredHelper<T>;
-
-type PropagateRequiredHelper<
-  T extends Record<PropertyKey, Record<PropertyKey, unknown>>,
-  K extends keyof T = keyof T,
-  Partition extends { required: K; optional: K } = K extends unknown
-    ? HasRequiredKeys<ValueOf<T, K>> extends true
-      ? { required: K; optional: never }
-      : { required: never; optional: K }
-    : never,
 > = Simplify<
-  Required<Pick<T, Partition["required"]>> &
-    Partial<Pick<T, Partition["optional"]>>
+  Required<Pick<T, PropagateRequiredPartition<T>["required"]>> &
+    Partial<Pick<T, PropagateRequiredPartition<T>["optional"]>>
 >;
+
+type PropagateRequiredPartition<
+  T extends Record<PropertyKey, Record<PropertyKey, unknown>>,
+> = {
+  [K in keyof T]-?: HasRequiredKeys<ValueOf<T, K>> extends true
+    ? { required: K; optional: never }
+    : { required: never; optional: K };
+}[keyof T];

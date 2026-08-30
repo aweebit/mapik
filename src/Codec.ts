@@ -52,19 +52,23 @@ export type MapInnerNode<T = any, E = T> = T | E extends object
 type MapInnerNodeHelper<
   T,
   E,
-  K extends keyof T & keyof E = keyof T & keyof E,
-  Partition extends { required: K; optional: K } = K extends unknown
-    ? MutuallyAssignable<ValueOf<T, K>, ValueOf<E, K>> extends true
-      ? { required: never; optional: K }
-      : { required: K; optional: never }
-    : never,
+  Partition extends MapInnerNodePartition<T, E> = MapInnerNodePartition<T, E>,
 > = Simplify<
   {
-    readonly [P in Partition["required"]]: Map<ValueOf<T, P>, ValueOf<E, P>>;
+    readonly [K in Partition["required"]]: Map<ValueOf<T, K>, ValueOf<E, K>>;
   } & {
-    readonly [P in Partition["optional"]]?: Map<ValueOf<T, P>, ValueOf<E, P>>;
+    readonly [K in Partition["optional"]]?: Map<ValueOf<T, K>, ValueOf<E, K>>;
   }
 >;
+
+type MapInnerNodePartition<T, E> = {
+  [K in keyof T & keyof E]: MutuallyAssignable<
+    ValueOf<T, K>,
+    ValueOf<E, K>
+  > extends true
+    ? { required: never; optional: K }
+    : { required: K; optional: never };
+}[keyof T & keyof E];
 
 export type MapCompletionHelper<T = any, E = T> = T | E extends object
   ? MutuallyAssignable<keyof T, keyof E> extends true
@@ -75,22 +79,17 @@ export type MapCompletionHelper<T = any, E = T> = T | E extends object
 type MapCompletionHelperHelper<
   T,
   E,
-  K extends keyof T & keyof E = keyof T & keyof E,
-  Partition extends { required: K; optional: K } = K extends unknown
-    ? MutuallyAssignable<ValueOf<T, K>, ValueOf<E, K>> extends true
-      ? { required: never; optional: K }
-      : { required: K; optional: never }
-    : never,
+  Partition extends MapInnerNodePartition<T, E> = MapInnerNodePartition<T, E>,
 > = Simplify<
   {
-    readonly [P in Partition["required"]]: MapCompletionHelper<
-      ValueOf<T, P>,
-      ValueOf<E, P>
+    readonly [K in Partition["required"]]: MapCompletionHelper<
+      ValueOf<T, K>,
+      ValueOf<E, K>
     >;
   } & {
-    readonly [P in Partition["optional"]]?: MapCompletionHelper<
-      ValueOf<T, P>,
-      ValueOf<E, P>
+    readonly [K in Partition["optional"]]?: MapCompletionHelper<
+      ValueOf<T, K>,
+      ValueOf<E, K>
     >;
   }
 >;
