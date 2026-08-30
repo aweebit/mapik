@@ -45,7 +45,7 @@
     "prepack": "npm run build"
   },
   "peerDependencies": {
-    "drizzle-orm": "^1.0.0-rc.1",
+    "drizzle-orm": ">=0.39.0",
     "kysely": ">=0.15.0"
   },
   "peerDependenciesMeta": {

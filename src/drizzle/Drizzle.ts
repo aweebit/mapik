@@ -1,7 +1,9 @@
 import {
-  getColumns,
+  getTableColumns,
   getTableUniqueName,
-  is,
+  getViewName,
+  getViewSelectedFields,
+  isTable,
   Table,
   View,
   type InferSelectModel,
@@ -9,17 +11,26 @@ import {
 } from "drizzle-orm";
 import { DeepFlat, Utils } from "../index.js";
 
-export * from "./EntityManager.js";
+export * from "./EntityMapper.js";
+
+const getColumns = <T extends Table | View>(source: T) =>
+  (isTable(source)
+    ? getTableColumns(source)
+    : getViewSelectedFields(source)) as T extends Table
+    ? ReturnType<typeof getTableColumns<T>>
+    : T extends View
+      ? ReturnType<typeof getViewSelectedFields<T>>
+      : never;
 
 export type IdentityMap<T extends Table | View> = Utils.IdentityMap<
   keyof ReturnType<typeof getColumns<T>>
 >;
 
 export const identityMap = <T extends Table | View>(
-  table: T,
+  source: T,
 ): IdentityMap<T> => {
   return Utils.identityMap(
-    Object.keys(getColumns(table)) as Array<
+    Object.keys(getColumns(source)) as Array<
       keyof ReturnType<typeof getColumns<T>>
     >,
   );
@@ -36,15 +47,12 @@ export class Mapper<
   M extends DeepFlat.Map<keyof IdentityMap<T>> = DeepFlat.Map<
     keyof IdentityMap<T>
   >,
-> extends DeepFlat.AbstractMapper<M, InferSelect<T>> {
+> extends DeepFlat.MapperBase<M, InferSelect<T>> {
   constructor(
     readonly source: T,
-    protected readonly underlyingMapper: DeepFlat.AbstractMapper<
-      M,
-      InferSelect<T>
-    >,
+    map: M,
   ) {
-    super();
+    super(map);
   }
 
   static make<T extends Table | View>(source: T): Mapper<T, IdentityMap<T>>;
@@ -62,27 +70,10 @@ export class Mapper<
   >(source: T, map?: M | ((identityMap: IdentityMap<T>) => M)) {
     return new Mapper<T, M>(
       source,
-      map === undefined
-        ? (DeepFlat.IdentityMapper.for() as unknown as DeepFlat.AbstractMapper<
-            M,
-            InferSelect<T>
-          >)
-        : new DeepFlat.Mapper(
-            typeof map === "function" ? map(identityMap(source)) : map,
-          ),
+      typeof map === "function"
+        ? map(identityMap(source))
+        : (map ?? (identityMap(source) as unknown as M)),
     );
-  }
-
-  override flatten<
-    X extends DeepFlat.Constraint.DeepFromFlat<M, InferSelect<T>>,
-  >(deep: X): DeepFlat.Flatten<M, X> {
-    return this.underlyingMapper.flatten(deep);
-  }
-
-  override deepen<
-    X extends DeepFlat.Constraint.FlatFromFlat<M, InferSelect<T>>,
-  >(flat: X): DeepFlat.Deepen<M, X> {
-    return this.underlyingMapper.deepen(flat);
   }
 }
 
@@ -99,11 +90,13 @@ export function createMapper<M extends Mapper>(mappers: readonly M[]) {
   return <T extends M["source"]>(source: T): ExtractMapper<M, T> => {
     const mapper = mapperMap.get(source);
     if (mapper === undefined) {
-      const sourceKind = is(source, Table) ? "table" : "view";
+      const isSourceTable = isTable(source);
+      const sourceKind = isSourceTable ? "table" : "view";
+      const sourceName = isSourceTable
+        ? getTableUniqueName(source)
+        : getViewName(source);
       throw new Error(
-        `No mapper was registered for ${sourceKind} ${getTableUniqueName(
-          source,
-        )}`,
+        `No mapper was registered for ${sourceKind} ${sourceName}`,
       );
     }
     return mapper as ExtractMapper<M, T>;
