@@ -177,6 +177,23 @@ type DeepSimplifyHelper<
     : never;
 } & {};
 
+export type DeepPartial<
+  M extends Map,
+  D extends Constraint.Deep<M>,
+> = DeepPartialHelper<M, D> & {};
+
+type DeepPartialHelper<
+  M extends Map,
+  D,
+  K extends keyof D = keyof M & keyof D,
+> = {
+  [P in K]?: M[P] extends infer MV
+    ? MV extends Map
+      ? DeepPartialHelper<MV, ValueOf<D, P>>
+      : ValueOf<D, P>
+    : never;
+} & {};
+
 export abstract class AbstractMapper<
   M extends Map = Map,
   F extends Constraint.Flat<M> = Constraint.Flat<M>,
