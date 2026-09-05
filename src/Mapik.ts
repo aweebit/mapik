@@ -194,11 +194,11 @@ export class Mapik<
 
   static makeFromDeepFlat<const DFM extends DeepFlat.Map>(
     deepFlatMap: DFM,
-  ): FullDecodeBuilder<DFM>;
+  ): FullDecodeBuilder<DFM, DeepFlat.Constraint.Flat<DFM>>;
   static makeFromDeepFlat<
     DFM extends DeepFlat.Map,
     F extends DeepFlat.Constraint.Flat<DFM>,
-  >(deepFlatMapper: DeepFlat.AbstractMapper<DFM, F>): FullDecodeBuilder<DFM>;
+  >(deepFlatMapper: DeepFlat.AbstractMapper<DFM, F>): FullDecodeBuilder<DFM, F>;
   static makeFromDeepFlat<
     DFM extends DeepFlat.Map,
     F extends DeepFlat.Constraint.Flat<DFM>,
@@ -471,7 +471,7 @@ class DecodeBuilder<
 
 class FullDecodeBuilder<
   DFM extends DeepFlat.Map,
-  F extends DeepFlat.Constraint.Flat<DFM> = DeepFlat.Constraint.Flat<DFM>,
+  F extends DeepFlat.Constraint.Flat<DFM>,
 > extends DecodeBuilder<DFM, F> {
   constructor(deepFlatMapOrMapper: DFM | DeepFlat.AbstractMapper<DFM, F>) {
     super(deepFlatMapOrMapper);
