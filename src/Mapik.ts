@@ -281,6 +281,20 @@ export class Mapik<
   ): Mapik<CM, DFM, T, D, F>;
   static make<
     CM extends Codec.Map<T, D>,
+    DFM extends DeepFlat.Map,
+    T = Codec.Infer.Type<CM>,
+    D extends DeepFlat.Constraint.DeepFromFlat<DFM, F> = DeepFlat.DeepSimplify<
+      DFM,
+      DeepFlat.Constraint.Deep<DFM> & Codec.Infer.Encoded<CM>
+    >,
+    F extends DeepFlat.Constraint.FlatFromDeep<DFM, D> =
+      DeepFlat.Constraint.FlatFromDeep<DFM, D>,
+  >(
+    codecMapOrMapper: CM | Codec.MapperBase<CM, T, D>,
+    deepFlatMapOrMapper: DFM | DeepFlat.AbstractMapper<DFM, F>,
+  ): Mapik<CM, DFM, T, D, F>;
+  static make<
+    CM extends Codec.Map<T, D>,
     const DFM extends DeepFlat.Map,
     T,
     D extends DeepFlat.Constraint.DeepFromFlat<DFM, F>,
