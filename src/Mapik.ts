@@ -4,7 +4,7 @@ import type { Simplify, SimplifyReadonly } from "./utils/index.js";
 
 export class MapikBase<
   CM extends Codec.Map<T, D> = any,
-  DFM extends DeepFlat.Map = DeepFlat.Map,
+  const DFM extends DeepFlat.Map = DeepFlat.Map,
   T = Codec.Infer.Type<CM>,
   D extends DeepFlat.Constraint.DeepFromFlat<DFM, F> = DeepFlat.DeepSimplify<
     DFM,
@@ -148,7 +148,7 @@ type MapikFor<X> = Simplify<
 
 export class Mapik<
   CM extends Codec.Map<T, D> = any,
-  DFM extends DeepFlat.Map = DeepFlat.Map,
+  const DFM extends DeepFlat.Map = DeepFlat.Map,
   T = Codec.Infer.Type<CM>,
   D extends DeepFlat.Constraint.DeepFromFlat<DFM, F> = DeepFlat.DeepSimplify<
     DFM,
@@ -171,7 +171,7 @@ export class Mapik<
   static makeFromDeepFlat<
     DFM extends DeepFlat.Map,
     F extends DeepFlat.Constraint.Flat<DFM>,
-  >(deepFlatMapOrMapper: DeepFlat.AbstractMapper<DFM, F>) {
+  >(deepFlatMapOrMapper: DFM | DeepFlat.AbstractMapper<DFM, F>) {
     return new FullDecodeBuilder(deepFlatMapOrMapper);
   }
 
@@ -281,7 +281,7 @@ export class Mapik<
   ): Mapik<CM, DFM, T, D, F>;
   static make<
     CM extends Codec.Map<T, D>,
-    DFM extends DeepFlat.Map,
+    const DFM extends DeepFlat.Map,
     T = Codec.Infer.Type<CM>,
     D extends DeepFlat.Constraint.DeepFromFlat<DFM, F> = DeepFlat.DeepSimplify<
       DFM,
@@ -295,7 +295,7 @@ export class Mapik<
   ): Mapik<CM, DFM, T, D, F>;
   static make<
     CM extends Codec.Map<T, D>,
-    const DFM extends DeepFlat.Map,
+    DFM extends DeepFlat.Map,
     T,
     D extends DeepFlat.Constraint.DeepFromFlat<DFM, F>,
     F extends DeepFlat.Constraint.FlatFromDeep<DFM, D>,
@@ -303,13 +303,12 @@ export class Mapik<
     codecMapOrMapper?: CM | Codec.MapperBase<CM, T, D>,
     deepFlatMapOrMapper?: DFM | DeepFlat.AbstractMapper<DFM, F>,
   ) {
-    if (deepFlatMapOrMapper === undefined)
-      deepFlatMapOrMapper =
-        DeepFlat.IdentityMapper.for() as unknown as DeepFlat.AbstractMapper<
-          DFM,
-          F
-        >;
-    return new Mapik(codecMapOrMapper ?? ({} as CM), deepFlatMapOrMapper!);
+    deepFlatMapOrMapper ??=
+      DeepFlat.IdentityMapper.for() as unknown as DeepFlat.AbstractMapper<
+        DFM,
+        F
+      >;
+    return new Mapik(codecMapOrMapper ?? ({} as CM), deepFlatMapOrMapper);
   }
 }
 
@@ -336,12 +335,11 @@ class EncodeBuilder<CM extends Codec.Map<T, D>, T, D extends object> {
     DFM extends DeepFlat.Map<PropertyKey, D>,
     F extends DeepFlat.Constraint.FlatFromDeep<DFM, D>,
   >(deepFlatMapOrMapper?: DFM | DeepFlat.AbstractMapper<DFM, F>) {
-    if (deepFlatMapOrMapper === undefined)
-      deepFlatMapOrMapper =
-        DeepFlat.IdentityMapper.for() as unknown as DeepFlat.AbstractMapper<
-          DFM,
-          F
-        >;
+    deepFlatMapOrMapper ??=
+      DeepFlat.IdentityMapper.for() as unknown as DeepFlat.AbstractMapper<
+        DFM,
+        F
+      >;
     return new Mapik<CM, DFM, T, D, F>(
       this.codecMapOrMapper,
       deepFlatMapOrMapper,
