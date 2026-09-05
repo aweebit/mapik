@@ -31,7 +31,7 @@
     ".": "./dist/index.js",
     "./drizzle": "./dist/drizzle/index.js",
     "./drizzle/kysely": "./dist/drizzle/kysely/index.js",
-    "./*": "./dist/*"
+    "./*": "./dist/*.js"
   },
   "files": [
     "src/**/*.ts",
