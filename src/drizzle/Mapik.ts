@@ -30,6 +30,21 @@ export namespace Mapik {
           : never
         : never
       : never;
+
+  export type ValidateCodecMap<
+    T extends Table | View,
+    CM extends Codec.Map<A, any>,
+    DFM extends DeepFlat.Map<keyof Drizzle.IdentityMap<T>>,
+    A,
+    Then,
+  > = Mapik.InferIntermediateType<T, CM, DFM, A> extends never ? never : Then;
+
+  export type Inferred<
+    T extends Table | View,
+    CM extends Codec.Map<A, any>,
+    DFM extends DeepFlat.Map<keyof Drizzle.IdentityMap<T>>,
+    A,
+  > = Mapik<T, CM, DFM, A, Mapik.InferIntermediateType<T, CM, DFM, A>>;
 }
 
 export class MapikBase<
@@ -52,7 +67,13 @@ export class MapikBase<
 > {
   constructor(
     readonly source: T,
-    codecMapOrMapper: CM | Codec.MapperBase<CM, A, B>,
+    codecMapOrMapper: Mapik.ValidateCodecMap<
+      T,
+      CM,
+      DFM,
+      A,
+      CM | Codec.MapperBase<CM, A, B>
+    >,
     deepFlatMapOrMapper: DFM | Mapik.DeepFlatMapper<T, DFM>,
   ) {
     super(codecMapOrMapper, deepFlatMapOrMapper);
@@ -70,47 +91,44 @@ export class Mapik<
     Mapik.InferIntermediateType<T, CM, DFM, A>,
 > extends MapikBase<T, CM, DFM, A, B> {
   static make<A>(): {
-    <
-      T extends Table | View,
-      CM extends Codec.Map<A, B>,
-      B extends Mapik.IntermediateTypeConstraint<T, Drizzle.IdentityMap<T>> =
-        Mapik.InferIntermediateType<T, CM, Drizzle.IdentityMap<T>, A>,
-    >(
+    <T extends Table | View, CM extends Codec.Map<A, any>>(
       source: T,
-      codecMap: CM,
+      codecMap: Mapik.ValidateCodecMap<T, CM, Drizzle.IdentityMap<T>, A, CM>,
       deepFlatMapOrMapper?: undefined,
-    ): Mapik<T, CM, Drizzle.IdentityMap<T>, A, B>;
+    ): Mapik.Inferred<T, CM, Drizzle.IdentityMap<T>, A>;
     <
       T extends Table | View,
       CM extends Codec.Map<A, B>,
       B extends Mapik.IntermediateTypeConstraint<T, Drizzle.IdentityMap<T>>,
     >(
       source: T,
-      codecMapper: Codec.MapperBase<CM, A, B>,
+      codecMapper: Mapik.ValidateCodecMap<
+        T,
+        CM,
+        Drizzle.IdentityMap<T>,
+        A,
+        Codec.MapperBase<CM, A, B>
+      >,
       deepFlatMapOrMapper?: undefined,
     ): Mapik<T, CM, Drizzle.IdentityMap<T>, A, B>;
     <
       T extends Table | View,
-      CM extends Codec.Map<A, B>,
+      CM extends Codec.Map<A, any>,
       const DFM extends DeepFlat.Map<keyof Drizzle.IdentityMap<T>>,
-      B extends Mapik.IntermediateTypeConstraint<T, DFM> =
-        Mapik.InferIntermediateType<T, CM, DFM, A>,
     >(
       source: T,
-      codecMap: CM,
+      codecMap: Mapik.ValidateCodecMap<T, CM, DFM, A, CM>,
       deepFlatMap: DFM,
-    ): Mapik<T, CM, DFM, A, B>;
+    ): Mapik.Inferred<T, CM, DFM, A>;
     <
       T extends Table | View,
-      CM extends Codec.Map<A, B>,
+      CM extends Codec.Map<A, any>,
       DFM extends DeepFlat.Map<keyof Drizzle.IdentityMap<T>>,
-      B extends Mapik.IntermediateTypeConstraint<T, DFM> =
-        Mapik.InferIntermediateType<T, CM, DFM, A>,
     >(
       source: T,
-      codecMap: CM,
+      codecMap: Mapik.ValidateCodecMap<T, CM, DFM, A, CM>,
       deepFlatMapper: Mapik.DeepFlatMapper<T, DFM>,
-    ): Mapik<T, CM, DFM, A, B>;
+    ): Mapik.Inferred<T, CM, DFM, A>;
     <
       T extends Table | View,
       CM extends Codec.Map<A, B>,
@@ -118,7 +136,13 @@ export class Mapik<
       B extends Mapik.IntermediateTypeConstraint<T, DFM>,
     >(
       source: T,
-      codecMapper: Codec.MapperBase<CM, A, B>,
+      codecMapper: Mapik.ValidateCodecMap<
+        T,
+        CM,
+        DFM,
+        A,
+        Codec.MapperBase<CM, A, B>
+      >,
       deepFlatMap: DFM,
     ): Mapik<T, CM, DFM, A, B>;
     <
@@ -128,7 +152,13 @@ export class Mapik<
       B extends Mapik.IntermediateTypeConstraint<T, DFM>,
     >(
       source: T,
-      codecMapper: Codec.MapperBase<CM, A, B>,
+      codecMapper: Mapik.ValidateCodecMap<
+        T,
+        CM,
+        DFM,
+        A,
+        Codec.MapperBase<CM, A, B>
+      >,
       deepFlatMapper: Mapik.DeepFlatMapper<T, DFM>,
     ): Mapik<T, CM, DFM, A, B>;
     <
@@ -139,7 +169,13 @@ export class Mapik<
         Mapik.InferIntermediateType<T, CM, DFM, A>,
     >(
       source: T,
-      codecMapOrMapper: CM | Codec.MapperBase<CM, A, B>,
+      codecMapOrMapper: Mapik.ValidateCodecMap<
+        T,
+        CM,
+        DFM,
+        A,
+        CM | Codec.MapperBase<CM, A, B>
+      >,
       deepFlatMapOrMapper: DFM | Mapik.DeepFlatMapper<T, DFM>,
     ): Mapik<T, CM, DFM, A, B>;
   };
@@ -157,15 +193,13 @@ export class Mapik<
   >;
   static make<
     T extends Table | View,
-    CM extends Codec.Map<A, B>,
+    CM extends Codec.Map<A, any>,
     A = Codec.Infer.Type<CM>,
-    B extends Mapik.IntermediateTypeConstraint<T, Drizzle.IdentityMap<T>> =
-      Mapik.InferIntermediateType<T, CM, Drizzle.IdentityMap<T>, A>,
   >(
     source: T,
-    codecMap: CM,
+    codecMap: Mapik.ValidateCodecMap<T, CM, Drizzle.IdentityMap<T>, A, CM>,
     deepFlatMapOrMapper?: undefined,
-  ): Mapik<T, CM, Drizzle.IdentityMap<T>, A, B>;
+  ): Mapik.Inferred<T, CM, Drizzle.IdentityMap<T>, A>;
   static make<
     T extends Table | View,
     CM extends Codec.Map<A, B>,
@@ -173,10 +207,15 @@ export class Mapik<
     B extends Mapik.IntermediateTypeConstraint<T, Drizzle.IdentityMap<T>>,
   >(
     source: T,
-    codecMapper: Codec.MapperBase<CM, A, B>,
+    codecMapper: Mapik.ValidateCodecMap<
+      T,
+      CM,
+      Drizzle.IdentityMap<T>,
+      A,
+      Codec.MapperBase<CM, A, B>
+    >,
     deepFlatMapOrMapper?: undefined,
   ): Mapik<T, CM, Drizzle.IdentityMap<T>, A, B>;
-
   static make<
     T extends Table | View,
     const DFM extends DeepFlat.Map<keyof Drizzle.IdentityMap<T>>,
@@ -209,24 +248,24 @@ export class Mapik<
   >;
   static make<
     T extends Table | View,
-    CM extends Codec.Map<A, B>,
+    CM extends Codec.Map<A, any>,
     const DFM extends DeepFlat.Map<keyof Drizzle.IdentityMap<T>>,
     A = Codec.Infer.Type<CM>,
-    B extends Mapik.IntermediateTypeConstraint<T, DFM> =
-      Mapik.InferIntermediateType<T, CM, DFM, A>,
-  >(source: T, codecMap: CM, deepFlatMap: DFM): Mapik<T, CM, DFM, A, B>;
-  static make<
-    T extends Table | View,
-    CM extends Codec.Map<A, B>,
-    DFM extends DeepFlat.Map<keyof Drizzle.IdentityMap<T>>,
-    A = Codec.Infer.Type<CM>,
-    B extends Mapik.IntermediateTypeConstraint<T, DFM> =
-      Mapik.InferIntermediateType<T, CM, DFM, A>,
   >(
     source: T,
-    codecMap: CM,
+    codecMap: Mapik.ValidateCodecMap<T, CM, DFM, A, CM>,
+    deepFlatMap: DFM,
+  ): Mapik.Inferred<T, CM, DFM, A>;
+  static make<
+    T extends Table | View,
+    CM extends Codec.Map<A, any>,
+    DFM extends DeepFlat.Map<keyof Drizzle.IdentityMap<T>>,
+    A = Codec.Infer.Type<CM>,
+  >(
+    source: T,
+    codecMap: Mapik.ValidateCodecMap<T, CM, DFM, A, CM>,
     deepFlatMapper: Mapik.DeepFlatMapper<T, DFM>,
-  ): Mapik<T, CM, DFM, A, B>;
+  ): Mapik.Inferred<T, CM, DFM, A>;
   static make<
     T extends Table | View,
     CM extends Codec.Map<A, B>,
@@ -235,7 +274,13 @@ export class Mapik<
     B extends Mapik.IntermediateTypeConstraint<T, DFM>,
   >(
     source: T,
-    codecMapper: Codec.MapperBase<CM, A, B>,
+    codecMapper: Mapik.ValidateCodecMap<
+      T,
+      CM,
+      DFM,
+      A,
+      Codec.MapperBase<CM, A, B>
+    >,
     deepFlatMap: DFM,
   ): Mapik<T, CM, DFM, A, B>;
   static make<
@@ -246,7 +291,13 @@ export class Mapik<
     B extends Mapik.IntermediateTypeConstraint<T, DFM>,
   >(
     source: T,
-    codecMapper: Codec.MapperBase<CM, A, B>,
+    codecMapper: Mapik.ValidateCodecMap<
+      T,
+      CM,
+      DFM,
+      A,
+      Codec.MapperBase<CM, A, B>
+    >,
     deepFlatMapper: Mapik.DeepFlatMapper<T, DFM>,
   ): Mapik<T, CM, DFM, A, B>;
   static make<
@@ -258,7 +309,13 @@ export class Mapik<
       Mapik.InferIntermediateType<T, CM, DFM, A>,
   >(
     source: T,
-    codecMapOrMapper: CM | Codec.MapperBase<CM, A, B>,
+    codecMapOrMapper: Mapik.ValidateCodecMap<
+      T,
+      CM,
+      DFM,
+      A,
+      CM | Codec.MapperBase<CM, A, B>
+    >,
     deepFlatMapOrMapper: DFM | Mapik.DeepFlatMapper<T, DFM>,
   ): Mapik<T, CM, DFM, A, B>;
   static make<
@@ -284,7 +341,13 @@ export class Mapik<
     ) => {
       return new Mapik<T, CM, DFM, A, B>(
         source,
-        codecMapOrMapper ?? ({} as CM),
+        (codecMapOrMapper ?? {}) as Mapik.ValidateCodecMap<
+          T,
+          CM,
+          DFM,
+          A,
+          CM | Codec.MapperBase<CM, A, B>
+        >,
         deepFlatMapOrMapper ?? (Drizzle.identityMap(source) as unknown as DFM),
       );
     };

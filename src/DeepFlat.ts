@@ -375,7 +375,7 @@ export class AdHocDelimiterMapper<
     X extends Constraint.FlatFromFlat<DelimiterMap<D, keyof T>, T>,
   >(
     flat: ValidateDeepenAtDelimiterInput<D, X>,
-  ): ValidateDeepenAtDelimiterInput<D, X, Deepen<DelimiterMap<D, keyof T>, X>> {
+  ): Deepen<DelimiterMap<D, keyof T>, X> {
     const result: Record<PropertyKey, unknown> = {};
     for (const key of Object.getOwnPropertyNames(flat)) {
       const splitKey = key.split(this.delimiter);
