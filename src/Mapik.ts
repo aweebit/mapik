@@ -219,9 +219,9 @@ export class Mapik<
     D extends object = // @ts-expect-error
       Codec.Infer.Encoded<// no @ts-expect-error here
       CM>,
-  >(codecMapper: Codec.Mapper<CM, T, D>): EncodeBuilder<CM, T, D>;
+  >(codecMapper: Codec.MapperBase<CM, T, D>): EncodeBuilder<CM, T, D>;
   static makeFromCodec<CM extends Codec.Map<T, D>, T, D extends object>(
-    codecMapOrMapper: CM | Codec.Mapper<CM, T, D>,
+    codecMapOrMapper: CM | Codec.MapperBase<CM, T, D>,
   ): EncodeBuilder<CM, T, D> {
     return new EncodeBuilder(codecMapOrMapper);
   }

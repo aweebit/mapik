@@ -76,8 +76,8 @@ export const createEntityMapperClass = <D extends string>(delimiter: D) => {
         T
       >,
       ...[codecMapOrMapper]: {} extends M
-        ? [codecMapOrMapper?: M | Codec.Mapper<M, A, B>]
-        : [codecMapOrMapper: M | Codec.Mapper<M, A, B>]
+        ? [codecMapOrMapper?: M | Codec.MapperBase<M, A, B>]
+        : [codecMapOrMapper: M | Codec.MapperBase<M, A, B>]
     ) {
       const deepFlatMapper = makeDrizzleMapper(source);
       super(codecMapOrMapper ?? ({} as M), deepFlatMapper);
@@ -119,7 +119,7 @@ export const createEntityMapperClass = <D extends string>(delimiter: D) => {
           EntityMapper.InferIntermediateType<D, A, T, M>,
       >(
         source: ValidateDeepenAtDelimiterInput<D, Drizzle.IdentityMap<T>, T>,
-        codecMapper: Codec.Mapper<M, A, B>,
+        codecMapper: Codec.MapperBase<M, A, B>,
       ): EntityMapper<A, T, M, B>;
     } {
       return <
@@ -130,8 +130,8 @@ export const createEntityMapperClass = <D extends string>(delimiter: D) => {
       >(
         source: T,
         ...rest: {} extends M
-          ? [codecMapOrMapper?: M | Codec.Mapper<M, A, B>]
-          : [codecMapOrMapper: M | Codec.Mapper<M, A, B>]
+          ? [codecMapOrMapper?: M | Codec.MapperBase<M, A, B>]
+          : [codecMapOrMapper: M | Codec.MapperBase<M, A, B>]
       ) => new EntityMapper<A, T, M, B>(source, ...rest);
     }
   };
