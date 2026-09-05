@@ -92,37 +92,12 @@ type MapikFor<X> = Simplify<
           >;
         }
       : unknown) & {
-      <
-        CM extends Codec.MapCompletionHelper<X, D>,
-        D extends object = // @ts-expect-error
-          Codec.Infer.Encoded<
-            // no @ts-expect-error here
-            CM,
-            X
-          >,
-      >(
-        codecMap: CM & Codec.MapCompletionHelper<X, D>,
-      ): EncodeBuilder<CM, X, D>;
-      <
-        CM extends Codec.Map<X, D>,
-        D extends object = // @ts-expect-error
-          Codec.Infer.Encoded<
-            // no @ts-expect-error here
-            CM,
-            X
-          >,
-      >(
-        codecMap: CM,
-      ): EncodeBuilder<CM, X, D>;
-      <
-        CM extends Codec.Map<X, D>,
-        D extends object = // @ts-expect-error
-          Codec.Infer.Encoded<
-            // no @ts-expect-error here
-            CM,
-            X
-          >,
-      >(
+      <CM extends Codec.Map<X, any>>(
+        codecMap: Codec.Infer.Encoded<CM, X> extends object ? CM : never,
+      ): Codec.Infer.Encoded<CM, X> extends object
+        ? EncodeBuilder<CM, X, Codec.Infer.Encoded<CM, X>>
+        : never;
+      <CM extends Codec.Map<X, D>, D extends object>(
         codecMapper: Codec.MapperBase<CM, X, D>,
       ): EncodeBuilder<CM, X, D>;
     };
@@ -160,16 +135,10 @@ type MapikFor<X> = Simplify<
             X,
             X
           >;
-          <
-            CM extends Codec.MapCompletionHelper<T, X>,
-            T = Codec.Infer.Type<CM, X>,
-          >(
-            codecMap: CM & Codec.MapCompletionHelper<T, X>,
-          ): EncodeBuilder<CM, T, X>;
-          <CM extends Codec.Map<T, X>, T = Codec.Infer.Type<CM, X>>(
+          <CM extends Codec.Map<any, X>>(
             codecMap: CM,
-          ): EncodeBuilder<CM, T, X>;
-          <CM extends Codec.Map<T, X>, T = Codec.Infer.Type<CM, X>>(
+          ): EncodeBuilder<CM, Codec.Infer.Type<CM, X>, X>;
+          <CM extends Codec.Map<T, X>, T>(
             codecMapper: Codec.MapperBase<CM, T, X>,
           ): EncodeBuilder<CM, T, X>;
         };
@@ -213,13 +182,9 @@ export class Mapik<
       Codec.Infer.Encoded<// no @ts-expect-error here
       CM>,
   >(codecMap: CM): EncodeBuilder<CM, T, D>;
-  static makeFromCodec<
-    CM extends Codec.Map<T, D>,
-    T = Codec.Infer.Type<CM>,
-    D extends object = // @ts-expect-error
-      Codec.Infer.Encoded<// no @ts-expect-error here
-      CM>,
-  >(codecMapper: Codec.MapperBase<CM, T, D>): EncodeBuilder<CM, T, D>;
+  static makeFromCodec<CM extends Codec.Map<T, D>, T, D extends object>(
+    codecMapper: Codec.MapperBase<CM, T, D>,
+  ): EncodeBuilder<CM, T, D>;
   static makeFromCodec<CM extends Codec.Map<T, D>, T, D extends object>(
     codecMapOrMapper: CM | Codec.MapperBase<CM, T, D>,
   ): EncodeBuilder<CM, T, D> {
@@ -240,13 +205,7 @@ export class Mapik<
     codecMap: CM,
     deepFlatMapOrMapper?: undefined,
   ): Mapik<CM, IdentityMap<keyof D>, T, D, D>;
-  static make<
-    CM extends Codec.Map<T, D>,
-    T = Codec.Infer.Type<CM>,
-    D extends object = // @ts-expect-error
-      Codec.Infer.Encoded<// no @ts-expect-error here
-      CM>,
-  >(
+  static make<CM extends Codec.Map<T, D>, T, D extends object>(
     codecMapper: Codec.MapperBase<CM, T, D>,
     deepFlatMapOrMapper?: undefined,
   ): Mapik<CM, IdentityMap<keyof D>, T, D, D>;
@@ -303,13 +262,9 @@ export class Mapik<
   static make<
     CM extends Codec.Map<T, D>,
     const DFM extends DeepFlat.Map,
-    T = Codec.Infer.Type<CM>,
-    D extends DeepFlat.Constraint.DeepFromFlat<DFM, F> = DeepFlat.DeepSimplify<
-      DFM,
-      DeepFlat.Constraint.Deep<DFM> & Codec.Infer.Encoded<CM>
-    >,
-    F extends DeepFlat.Constraint.FlatFromDeep<DFM, D> =
-      DeepFlat.Constraint.FlatFromDeep<DFM, D>,
+    T,
+    D extends DeepFlat.Constraint.DeepFromFlat<DFM, F>,
+    F extends DeepFlat.Constraint.FlatFromDeep<DFM, D>,
   >(
     codecMapper: Codec.MapperBase<CM, T, D>,
     deepFlatMap: DFM,
@@ -398,32 +353,12 @@ class DecodeBuilder<
     DeepFlat.Deepen<DFM, F>,
     F
   >;
-  decode<
-    CM extends Codec.MapCompletionHelper<T, DeepFlat.Deepen<DFM, F>>,
-    T = Codec.Infer.Type<CM, DeepFlat.Deepen<DFM, F>>,
-  >(
-    codecMap: CM & Codec.MapCompletionHelper<T, DeepFlat.Deepen<DFM, F>>,
-  ): Mapik<
-    CM,
-    DFM,
-    T,
-    // @ts-expect-error
-    DeepFlat.Deepen<
-      // no @ts-expect-error here
-      DFM,
-      F
-    >,
-    F
-  >;
-  decode<
-    CM extends Codec.Map<T, DeepFlat.Deepen<DFM, F>>,
-    T = Codec.Infer.Type<CM, DeepFlat.Deepen<DFM, F>>,
-  >(
+  decode<CM extends Codec.Map<any, DeepFlat.Deepen<DFM, F>>>(
     codecMap: CM,
   ): Mapik<
     CM,
     DFM,
-    T,
+    Codec.Infer.Type<CM, DeepFlat.Deepen<DFM, F>>,
     // @ts-expect-error
     DeepFlat.Deepen<
       // no @ts-expect-error here
@@ -432,10 +367,7 @@ class DecodeBuilder<
     >,
     F
   >;
-  decode<
-    CM extends Codec.Map<T, DeepFlat.Deepen<DFM, F>>,
-    T = Codec.Infer.Type<CM, DeepFlat.Deepen<DFM, F>>,
-  >(
+  decode<CM extends Codec.Map<T, DeepFlat.Deepen<DFM, F>>, T>(
     codecMapper: Codec.MapperBase<CM, T, DeepFlat.Deepen<DFM, F>>,
   ): Mapik<
     CM,
@@ -449,11 +381,9 @@ class DecodeBuilder<
     >,
     F
   >;
-  decode<
-    CM extends Codec.Map<T, DeepFlat.Deepen<DFM, F>> = // @ts-expect-error
-      {},
-    T = Codec.Infer.Type<CM, DeepFlat.Deepen<DFM, F>>,
-  >(codecMapOrMapper?: CM | Codec.MapperBase<CM, T, DeepFlat.Deepen<DFM, F>>) {
+  decode<CM extends Codec.Map<T, DeepFlat.Deepen<DFM, F>>, T>(
+    codecMapOrMapper?: CM | Codec.MapperBase<CM, T, DeepFlat.Deepen<DFM, F>>,
+  ) {
     return new Mapik<
       CM,
       DFM,
