@@ -85,12 +85,12 @@ const Vector3dCodec = Codec.makeFor<typeof Vector3d.Type>().encode({
   decode: ({ x, y, z }) => [x, y, z],
 });
 
-// Entity manager factory with automatic deepening at "_" characters
-const createEntityManager = Drizzle.createCreateEntityManager("_");
+// Entity mapper factory with automatic deepening at "_" characters
+const createEntityMapper = Drizzle.createCreateEntityMapper("_");
 
-const experimentDataEntityManager = createEntityManager<ExperimentData>()(
+const experimentDataEntityMapper = createEntityMapper<ExperimentData>()(
   experimentDataTable,
-  // In addition to the automatic "_" deepening, the entity manager should
+  // In addition to the automatic "_" deepening, the entity mapper should
   // automatically convert both vectors between their array and object
   // representations
   { acceleration: { top: Vector3dCodec, bottom: Vector3dCodec } },
@@ -106,14 +106,14 @@ const newExperimentData = new ExperimentData({
 // Insert newExperimentData
 await db
   .insert(experimentDataTable)
-  .values(experimentDataEntityManager.encode(newExperimentData));
+  .values(experimentDataEntityMapper.encode(newExperimentData));
 
 // Select some rows
 const selectedRows = await db.select().from(experimentDataTable);
 
 // Convert rows to ExperimentData objects
 const selectedExperimentData = selectedRows.map(
-  (row) => new ExperimentData(experimentDataEntityManager.decode(row)),
+  (row) => new ExperimentData(experimentDataEntityMapper.decode(row)),
 );
 
 // Also works with partial selects
@@ -129,7 +129,7 @@ const selectedPartialRows = await db
   .from(experimentDataTable);
 
 const selectedPartialExperimentData = selectedPartialRows.map((row) =>
-  experimentDataEntityManager.decode(row),
+  experimentDataEntityMapper.decode(row),
 );
 // Result type: { acceleration: { top: readonly [number, number, number] };
 //                timestamp: Date }[]
