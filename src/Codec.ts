@@ -90,10 +90,10 @@ export declare namespace Infer {
           ? Simplify<
               Omit<X, keyof M> &
                 (keyof X & keyof M extends infer K extends keyof X
-                  ? { [P in K]: Side<S, M[K], ValueOf<X, K>> }
+                  ? { [P in K]: Side<S, M[P], ValueOf<X, P>> }
                   : never) &
                 (Exclude<keyof M, keyof X> extends infer K extends PropertyKey
-                  ? { readonly [P in K]?: Side<S, M[K]> }
+                  ? { readonly [P in K]?: Side<S, M[P]> }
                   : never)
             >
           : never;
